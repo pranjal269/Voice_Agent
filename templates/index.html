@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Voice Agent - Sound Sculpt Engine</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+      min-height: 100vh;
+      color: #e8f4fd;
+      overflow-x: hidden;
+    }
+
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 60px;
+      position: relative;
+      overflow: visible;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      width: 300px;
+      height: 100px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -30%);
+      background-image: 
+        radial-gradient(1px 1px at 40px 60px, rgba(59, 130, 246, 0.3), transparent 50%),
+        radial-gradient(1px 1px at 90px 40px, rgba(16, 185, 129, 0.3), transparent 50%),
+        radial-gradient(1px 1px at 140px 80px, rgba(99, 102, 241, 0.3), transparent 50%),
+        radial-gradient(1px 1px at 190px 50px, rgba(59, 130, 246, 0.3), transparent 50%);
+      background-size: 200px 200px;
+      background-repeat: no-repeat;
+      z-index: 0;
+      opacity: 0.7;
+      filter: blur(1px);
+      animation: particle-drift 15s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    
+    @keyframes particle-drift {
+      0% { transform: translate(-50%, -30%) rotate(0deg); }
+      100% { transform: translate(-50%, -30%) rotate(10deg); }
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 2px;
+      background: rgba(232, 244, 253, 0.3);
+      border-radius: 1px;
+    }
+
+    .main-title {
+      font-size: 48px;
+      font-weight: 700;
+      margin: 0 0 16px;
+      color: #e8f4fd;
+      letter-spacing: -0.025em;
+      text-shadow: 0 2px 10px rgba(232, 244, 253, 0.2);
+      position: relative;
+      display: inline-block;
+      z-index: 1;
+      animation: floating 3s ease-in-out infinite;
+    }
+    
+    @keyframes floating {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+    
+    .main-title::before {
+      content: "";
+      position: absolute;
+      top: -10px;
+      left: -15px;
+      right: -15px;
+      bottom: -10px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.1), rgba(99, 102, 241, 0.2));
+      border-radius: 8px;
+      z-index: -1;
+      transform-origin: center;
+      animation: pulse-glow 6s infinite alternate ease-in-out;
+      filter: blur(8px);
+      opacity: 0.6;
+    }
+    
+    @keyframes pulse-glow {
+      0% {
+        transform: scale(0.95);
+        opacity: 0.4;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(0.95);
+        opacity: 0.4;
+      }
+    }
+
+    .main-subtitle {
+      font-size: 20px;
+      color: rgba(232, 244, 253, 0.8);
+      margin: 0;
+      font-weight: 400;
+    }
+
+    .cards-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .card-icon {
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: #e8f4fd;
+      letter-spacing: -0.01em;
+    }
+
+    .card-description {
+      font-size: 15px;
+      color: rgba(232, 244, 253, 0.7);
+      margin: 0 0 24px;
+      line-height: 1.6;
+    }
+
+    /* Input Styles */
+    .input-container {
+      margin-bottom: 32px;
+      position: relative;
+    }
+
+    .text-input {
+      width: 100%;
+      padding: 16px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #e8f4fd;
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+      resize: none;
+      min-height: 80px;
+      line-height: 1.6;
+    }
+
+    .text-input:focus {
+      border-color: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+    }
+
+    .text-input::placeholder {
+      color: rgba(232, 244, 253, 0.5);
+    }
+
+    .char-counter {
+      position: absolute;
+      bottom: -20px;
+      right: 8px;
+      font-size: 12px;
+      color: rgba(232, 244, 253, 0.6);
+      font-weight: 500;
+    }
+
+    /* Button Styles */
+    .button-container {
+      margin-bottom: 32px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn, .generate-btn, .record-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e8f4fd;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 140px;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn:hover:not(:disabled), .generate-btn:hover:not(:disabled), .record-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn:active, .generate-btn:active, .record-btn:active {
+      transform: translateY(-1px) scale(1.01);
+    }
+
+    .btn:disabled, .generate-btn:disabled, .record-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      filter: grayscale(30%);
+    }
+
+    .btn-small {
+      padding: 10px 20px;
+      font-size: 14px;
+      min-width: 120px;
+      font-weight: 600;
+      border-radius: 10px;
+    }
+    
+    .btn-primary {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #e8f4fd;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background: rgba(59, 130, 246, 0.25);
+      border-color: rgba(59, 130, 246, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #e8f4fd;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: rgba(239, 68, 68, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.2);
+    }
+
+    .recording {
+      background: rgba(220, 20, 60, 0.2) !important;
+      border-color: rgba(220, 20, 60, 0.4) !important;
+      animation: pulse-recording 1.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse-recording {
+      from { 
+        background: rgba(220, 20, 60, 0.2);
+        border-color: rgba(220, 20, 60, 0.4);
+      }
+      to { 
+        background: rgba(220, 20, 60, 0.35);
+        border-color: rgba(220, 20, 60, 0.6);
+      }
+    }
+
+    /* Audio Player */
+    .audio-container {
+      margin-bottom: 24px;
+    }
+
+    .audio-player {
+      width: 100%;
+      height: 45px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      display: none;
+      outline: none;
+    }
+    
+    .audio-player::-webkit-media-controls-panel {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Transcription Styles */
+    .transcription-container {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 16px;
+      padding: 24px;
+      margin: 24px 0;
+      display: none;
+      animation: fadeInUp 0.3s ease-out;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .transcription-container.show {
+      display: block;
+    }
+
+    .transcription-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      color: #e8f4fd;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .transcription-text {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 80px;
+      color: #e8f4fd;
+      font-size: 15px;
+      line-height: 1.7;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      margin-bottom: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .transcription-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .transcription-meta {
+      font-size: 12px;
+      color: rgba(232, 244, 253, 0.6);
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Status Messages */
+    .status {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      opacity: 0;
+      transform: translateY(5px);
+    }
+
+    .status.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .status.success {
+      background: rgba(34, 197, 94, 0.15);
+      color: #e8f4fd;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #e8f4fd;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status.loading {
+      background: rgba(59, 130, 246, 0.15);
+      color: #e8f4fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .timer {
+      font-size: 20px;
+      font-weight: 600;
+      color: #e8f4fd;
+      margin: 12px 0;
+      font-family: 'Monaco', 'Courier New', monospace;
+      display: none;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 16px;
+    }
+
+    /* Keyboard Shortcuts */
+    .keyboard-shortcuts {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 30px;
+      font-size: 13px;
+      color: rgba(232, 244, 253, 0.7);
+      text-align: center;
+    }
+
+    .keyboard-shortcuts h4 {
+      margin-bottom: 12px;
+      color: #e8f4fd;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .shortcut {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin: 2px 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-weight: 600;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      font-size: 14px;
+      color: rgba(232, 244, 253, 0.7);
+      font-weight: 400;
+    }
+
+    .footer .heart {
+      color: #e8f4fd;
+      font-size: 16px;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .main-title {
+        font-size: 36px;
+      }
+
+      .main-subtitle {
+        font-size: 18px;
+      }
+
+      .cards-container {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+
+      .card {
+        padding: 32px 24px;
+      }
+
+      .card-icon {
+        width: 70px;
+        height: 70px;
+        font-size: 32px;
+      }
+
+      .card-title {
+        font-size: 24px;
+      }
+
+      .button-container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn, .generate-btn, .record-btn {
+        min-width: 200px;
+        margin: 4px 0;
+      }
+
+      .transcription-actions {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .transcription-actions .btn {
+        min-width: 200px;
+        margin: 6px 0;
+      }
+    }
+
+    /* Enhanced scrollbar */
+    .text-input::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .text-input::-webkit-scrollbar-track {
+      background: rgba(240, 235, 216, 0.1);
+      border-radius: 3px;
+    }
+
+    .text-input::-webkit-scrollbar-thumb {
+      background: rgba(62, 92, 118, 0.5);
+      border-radius: 3px;
+    }
+
+    .text-input::-webkit-scrollbar-thumb:hover {
+      background: rgba(62, 92, 118, 0.7);
+    }
+
+    .transcription-text::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .transcription-text::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    .transcription-text::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <div class="header">
+      <h1 class="main-title">AI Voice Agent</h1>
+      <p class="main-subtitle">Transform your thoughts into speech with cutting-edge AI technology</p>
+    </div>
+
+    <div class="cards-container">
+      <!-- AI Voice Agent Card -->
+      <div class="card">
+        <div class="card-icon">🎤</div>
+        <h2 class="card-title">Text to Speech</h2>
+        <p class="card-description">Convert your written text into natural-sounding speech with advanced AI voice synthesis</p>
+
+        <div class="input-container">
+          <textarea 
+            id="text-input" 
+            class="text-input" 
+            placeholder="Enter your message here... Let AI bring your words to life!"
+            rows="3"
+            maxlength="5000"
+          ></textarea>
+          <div id="char-counter" class="char-counter">0/5000</div>
+        </div>
+
+        <div class="button-container">
+          <button id="generate-btn" class="generate-btn">
+            <span id="btn-icon"></span>
+            <span id="btn-text">Generate Voice</span>
+          </button>
+        </div>
+
+        <div class="audio-container">
+          <audio id="audio-player" class="audio-player" controls></audio>
+        </div>
+
+        <div id="status" class="status"></div>
+      </div>
+
+      <!-- Speech-to-Text Card -->
+      <div class="card">
+        <div class="card-icon">🎙️</div>
+        <h2 class="card-title">Speech to Text</h2>
+        <p class="card-description">Record your voice and get instant AI-powered transcription with crystal clear accuracy</p>
+
+        <div class="button-container">
+          <button id="start-record-btn" class="record-btn start-recording">
+            <span id="start-record-icon"></span>
+            <span id="start-record-text">Start Recording</span>
+          </button>
+          <button id="stop-record-btn" class="record-btn stop-recording" disabled>
+            <span></span>
+            <span>Stop Recording</span>
+          </button>
+        </div>
+
+        <div id="timer" class="timer">00:00</div>
+
+        <div class="audio-container">
+          <audio id="recorded-audio" class="audio-player" controls style="display: none;"></audio>
+        </div>
+
+        <!-- Transcription Result Container -->
+        <div id="transcription-result" class="transcription-container">
+          <div class="transcription-header">
+            <span></span>
+            <span>Transcription Result</span>
+          </div>
+          <div id="transcription-text" class="transcription-text"></div>
+          <div class="transcription-actions">
+            <button id="copy-transcription-btn" class="btn btn-small btn-primary">
+               Copy Text
+            </button>
+            <button id="clear-transcription-btn" class="btn btn-small btn-danger">
+               Clear
+            </button>
+          </div>
+          <div id="transcription-meta" class="transcription-meta"></div>
+        </div>
+
+        <div id="echo-status" class="status"></div>
+      </div>
+    </div>
+
+    <!-- Keyboard Shortcuts -->
+    <div class="keyboard-shortcuts">
+      <h4>Keyboard Shortcuts</h4>
+      <div>
+        <span class="shortcut">Ctrl + Enter</span> Generate Audio
+        <span class="shortcut">Space</span> Start/Stop Recording
+        <span class="shortcut">Ctrl + C</span> Copy Transcription
+        <span class="shortcut">Esc</span> Clear Status Messages
+      </div>
+    </div>
+
+    <div class="footer">
+      Built with <span class="heart">❤️</span> by Pranjal | #30DaysOfCode | Day 6: AI Transcription
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>

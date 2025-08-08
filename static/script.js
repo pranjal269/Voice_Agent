@@ -210,19 +210,14 @@ async function startRecording() {
     mediaRecorder.onstop = async () => {
       // Create blob from recorded chunks
       const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-      const audioUrl = URL.createObjectURL(blob);
-      
-      // Set up audio player
-      recordedAudio.src = audioUrl;
-      recordedAudio.style.display = "block";
-      
+
       // Stop all tracks to release microphone
       stream.getTracks().forEach(track => track.stop());
       
-      showStatus("Recording completed! Processing transcription...", "success", echoStatus);
+      showStatus("Recording completed! Generating Murf echo...", "loading", echoStatus);
       
-      // Transcribe the recording
-      await transcribeAudio(blob);
+      // Echo the recording with Murf voice (transcribe -> TTS)
+      await echoWithMurf(blob);
     };
 
     mediaRecorder.onerror = (event) => {
@@ -323,6 +318,61 @@ async function transcribeAudio(blob) {
     if (transcriptionResult) {
       transcriptionResult.style.display = "none";
     }
+  }
+}
+
+// Echo Bot v2: Send recording to /tts/echo and play Murf audio URL
+async function echoWithMurf(blob) {
+  const echoStatus = document.getElementById("echo-status");
+  const recordedAudio = document.getElementById("recorded-audio");
+  const transcriptionResult = document.getElementById("transcription-result");
+  const transcriptionText = document.getElementById("transcription-text");
+
+  const formData = new FormData();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `recording_${timestamp}.webm`;
+  formData.append("file", blob, filename);
+
+  try {
+    showStatus("Transcribing and generating Murf audio...", "loading", echoStatus);
+
+    const response = await fetch("/tts/echo", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Echo failed with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.audio_url) {
+      throw new Error("Server did not return an audio URL");
+    }
+
+    // Update transcription UI if provided
+    if (data.transcription && transcriptionText && transcriptionResult) {
+      transcriptionText.textContent = data.transcription;
+      transcriptionResult.style.display = "block";
+    }
+
+    // Play Murf audio
+    recordedAudio.src = data.audio_url;
+    recordedAudio.style.display = "block";
+    setupAudioListeners(recordedAudio);
+
+    try {
+      await recordedAudio.play();
+      showStatus("Echo ready! Playing Murf voice.", "success", echoStatus);
+    } catch (playErr) {
+      console.warn("Autoplay blocked:", playErr);
+      showStatus("Echo ready! Click play to listen.", "success", echoStatus);
+    }
+  } catch (err) {
+    console.error("Echo failed:", err);
+    showStatus(`Echo failed: ${err.message}`, "error", echoStatus);
   }
 }
 
@@ -532,5 +582,6 @@ window.voiceAgent = {
   stopRecording,
   transcribeAudio,
   copyTranscription,
-  clearTranscription
+  clearTranscription,
+  echoWithMurf,
 };

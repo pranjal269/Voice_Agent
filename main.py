@@ -151,3 +151,86 @@ async def transcribe_file(file: UploadFile = File(...)):
             status_code=500,
             content={"error": f"Failed to transcribe audio: {str(e)}"}
         )
+
+@app.post("/tts/echo", summary="Echo audio with Murf voice (transcribe then TTS)", tags=["Echo Bot"]) 
+async def tts_echo(file: UploadFile = File(...)):
+    try:
+        allowed_types = [
+            "audio/webm",
+            "audio/wav",
+            "audio/mp3",
+            "audio/m4a",
+            "audio/ogg",
+            "audio/opus",
+        ]
+        if file.content_type not in allowed_types:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": f"Unsupported file type: {file.content_type}. Allowed types: {allowed_types}"
+                },
+            )
+
+        audio_data = await file.read()
+        print(f"[Echo] Received audio '{file.filename}' ({len(audio_data)} bytes, {file.content_type})")
+
+        # 1) Transcribe with AssemblyAI
+        transcriber = aai.Transcriber()
+        transcript = transcriber.transcribe(audio_data)
+
+        if transcript.status == aai.TranscriptStatus.error:
+            print(f"❌ [Echo] Transcription failed: {transcript.error}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Transcription failed: {transcript.error}"},
+            )
+
+        transcription_text = (transcript.text or "").strip()
+        if not transcription_text:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Empty transcription. Please try recording again."},
+            )
+
+        print(f"✅ [Echo] Transcription: {transcription_text}")
+
+        # 2) Generate TTS with Murf
+        murf_url = "https://api.murf.ai/v1/speech/generate"
+        murf_payload = {
+            "text": transcription_text,
+            "voiceId": "en-US-natalie",
+            "format": "mp3",
+        }
+        murf_headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "api-key": MURF_API_KEY,
+        }
+        murf_response = requests.post(murf_url, json=murf_payload, headers=murf_headers)
+
+        if murf_response.status_code != 200:
+            print(f"❌ Murf API Error: {murf_response.text}")
+            return JSONResponse(
+                status_code=murf_response.status_code,
+                content={"error": murf_response.text},
+            )
+
+        murf_data = murf_response.json()
+        audio_url = murf_data.get("audioFile")
+        if not audio_url:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Murf API did not return an audioFile URL."},
+            )
+
+        print(f"✅ [Echo] Murf audio URL: {audio_url}")
+        return {
+            "audio_url": audio_url,
+            "transcription": transcription_text,
+            "voiceId": "en-US-natalie",
+            "filename": file.filename,
+        }
+
+    except Exception as e:
+        print(f"❌ [Echo] Error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})

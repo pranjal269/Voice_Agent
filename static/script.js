@@ -1,6 +1,259 @@
 // Voice Agent Script
 let isGenerating = false;
 
+// Error handling and retry configuration
+const ERROR_CONFIG = {
+  MAX_RETRIES: 3,
+  RETRY_DELAY_MS: 2000,
+  TIMEOUT_MS: 30000,
+  
+  // Error types that can be retried
+  RETRYABLE_ERRORS: [
+    'NETWORK_ERROR',
+    'TIMEOUT_ERROR',
+    'GENERAL_ERROR'
+  ],
+  
+  // User-friendly error messages
+  ERROR_MESSAGES: {
+    'STT_ERROR': '🎤 Speech recognition failed',
+    'LLM_ERROR': '🤖 AI processing failed',
+    'TTS_ERROR': '🔊 Audio generation failed',
+    'NETWORK_ERROR': '🌐 Network connection failed',
+    'AUTH_ERROR': '🔑 Authentication failed',
+    'QUOTA_ERROR': '📊 Daily limit reached',
+    'TIMEOUT_ERROR': '⏱️ Request timed out',
+    'GENERAL_ERROR': '⚠️ Something went wrong'
+  }
+};
+
+// Session management
+let currentSessionId = null;
+
+// Conversation control
+let isConversationActive = true;
+
+// Get or create session ID from URL params
+function getOrCreateSessionId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  let sessionId = urlParams.get('session_id');
+  
+  if (!sessionId) {
+    // Generate a new session ID
+    sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // Update URL with new session ID
+    urlParams.set('session_id', sessionId);
+    const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+    
+    console.log(`Generated new session ID: ${sessionId}`);
+  } else {
+    console.log(`Using existing session ID: ${sessionId}`);
+  }
+  
+  return sessionId;
+}
+
+// Update session display in UI
+function updateSessionDisplay() {
+  const sessionDisplay = document.getElementById("session-display");
+  if (sessionDisplay && currentSessionId) {
+    sessionDisplay.textContent = `Session: ${currentSessionId}`;
+  }
+}
+
+// Create new chat session
+function createNewSession() {
+  // Generate new session ID
+  const newSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  
+  // Update URL
+  const urlParams = new URLSearchParams(window.location.search);
+  urlParams.set('session_id', newSessionId);
+  const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+  window.history.pushState({}, '', newUrl);
+  
+  // Update current session
+  currentSessionId = newSessionId;
+  updateSessionDisplay();
+  
+  // Clear UI
+  const transcriptionResult = document.getElementById("transcription-result");
+  const transcriptionText = document.getElementById("transcription-text");
+  const recordedAudio = document.getElementById("recorded-audio");
+  const echoStatus = document.getElementById("echo-status");
+  
+  if (transcriptionResult) transcriptionResult.style.display = "none";
+  if (transcriptionText) transcriptionText.textContent = "";
+  if (recordedAudio) recordedAudio.style.display = "none";
+  if (echoStatus) hideStatus(echoStatus);
+  
+  console.log(`Created new session: ${newSessionId}`);
+  showStatus("New chat session started!", "success", document.getElementById("echo-status"));
+}
+
+// Stop the conversation (disable auto-recording)
+function stopConversation() {
+  isConversationActive = false;
+  
+  // Stop any ongoing recording
+  if (isRecording) {
+    stopRecording();
+  }
+  
+  // Update UI buttons
+  updateConversationControls();
+  
+  console.log("Conversation stopped");
+  showStatus("Conversation stopped. You can still record manually or click 'Resume Conversation'.", "success", document.getElementById("echo-status"));
+}
+
+// Resume the conversation (re-enable auto-recording)
+function resumeConversation() {
+  isConversationActive = true;
+  
+  // Update UI buttons
+  updateConversationControls();
+  
+  console.log("Conversation resumed");
+  showStatus("Conversation resumed. Auto-recording will start after AI responses.", "success", document.getElementById("echo-status"));
+}
+
+// Update conversation control buttons
+function updateConversationControls() {
+  const stopBtn = document.getElementById("stop-conversation-btn");
+  const resumeBtn = document.getElementById("resume-conversation-btn");
+  
+  if (stopBtn && resumeBtn) {
+    if (isConversationActive) {
+      stopBtn.style.display = "block";
+      resumeBtn.style.display = "none";
+    } else {
+      stopBtn.style.display = "none";
+      resumeBtn.style.display = "block";
+    }
+  }
+}
+
+// Enhanced Error Handling Functions
+function parseErrorResponse(response, data) {
+  // Try to parse enhanced error response from server
+  if (data && data.error_type) {
+    return {
+      type: data.error_type,
+      message: data.error || data.fallback_text || 'Unknown error occurred',
+      originalError: data.original_error || null,
+      retryable: ERROR_CONFIG.RETRYABLE_ERRORS.includes(data.error_type),
+      suggestion: data.retry_suggestion || 'Please try again',
+      timestamp: data.timestamp || Date.now()
+    };
+  }
+  
+  // Fallback to basic error parsing
+  const statusCode = response?.status || 0;
+  let errorType = 'GENERAL_ERROR';
+  let message = 'An unexpected error occurred';
+  
+  if (statusCode === 503) {
+    errorType = 'NETWORK_ERROR';
+    message = 'Service temporarily unavailable';
+  } else if (statusCode === 429) {
+    errorType = 'QUOTA_ERROR';
+    message = 'Too many requests. Please try again later.';
+  } else if (statusCode === 401 || statusCode === 403) {
+    errorType = 'AUTH_ERROR';
+    message = 'Authentication failed';
+  } else if (statusCode >= 500) {
+    errorType = 'NETWORK_ERROR';
+    message = 'Server error occurred';
+  }
+  
+  return {
+    type: errorType,
+    message: data?.error || message,
+    originalError: null,
+    retryable: ERROR_CONFIG.RETRYABLE_ERRORS.includes(errorType),
+    suggestion: 'Please try again in a moment',
+    timestamp: Date.now()
+  };
+}
+
+function formatErrorMessage(errorInfo) {
+  const icon = ERROR_CONFIG.ERROR_MESSAGES[errorInfo.type] || '⚠️';
+  let message = `${icon} ${errorInfo.message}`;
+  
+  if (errorInfo.retryable) {
+    message += '\n🔄 This error can be retried automatically.';
+  }
+  
+  if (errorInfo.suggestion) {
+    message += `\n💡 ${errorInfo.suggestion}`;
+  }
+  
+  return message;
+}
+
+async function retryWithBackoff(asyncFunction, maxRetries = ERROR_CONFIG.MAX_RETRIES) {
+  let lastError = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await asyncFunction();
+      if (attempt > 1) {
+        console.log(`✅ Retry successful on attempt ${attempt}`);
+      }
+      return result;
+    } catch (error) {
+      lastError = error;
+      console.warn(`❌ Attempt ${attempt} failed:`, error.message);
+      
+      // Don't retry non-retryable errors
+      if (error.errorInfo && !error.errorInfo.retryable) {
+        console.log(`🚫 Error type '${error.errorInfo.type}' is not retryable`);
+        throw error;
+      }
+      
+      // Don't wait after the last attempt
+      if (attempt < maxRetries) {
+        const delay = ERROR_CONFIG.RETRY_DELAY_MS * Math.pow(1.5, attempt - 1); // Exponential backoff
+        console.log(`⏳ Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  console.error(`❌ All ${maxRetries} retry attempts failed`);
+  throw lastError;
+}
+
+async function fetchWithTimeout(url, options, timeoutMs = ERROR_CONFIG.TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error(`Request timed out after ${timeoutMs}ms`);
+      timeoutError.errorInfo = {
+        type: 'TIMEOUT_ERROR',
+        message: 'Request timed out',
+        retryable: true,
+        suggestion: 'Please try again with a shorter message'
+      };
+      throw timeoutError;
+    }
+    throw error;
+  }
+}
+
 async function generateAudio() {
   if (isGenerating) return;
 
@@ -35,30 +288,44 @@ async function generateAudio() {
   btnIcon.innerHTML = '<div class="spinner"></div>';
   btnText.textContent = "Generating...";
 
-  showStatus("Generating audio... This may take a moment.", "loading");
-
   try {
-    const response = await fetch("/generate-audio", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        text: text,
-        voiceId: "en-US-natalie"
-      })
+    const result = await retryWithBackoff(async () => {
+      showStatus("Generating audio... This may take a moment.", "loading");
+      
+      const response = await fetchWithTimeout("/generate-audio", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          text: text,
+          voiceId: "en-US-natalie"
+        })
+      });
+
+      // Parse response data
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.warn("Failed to parse JSON response:", jsonError);
+      }
+
+      // Check if response is ok
+      if (!response.ok) {
+        const errorInfo = parseErrorResponse(response, data);
+        const error = new Error(errorInfo.message);
+        error.errorInfo = errorInfo;
+        throw error;
+      }
+
+      return data;
     });
 
-    // Check if response is ok
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (data.audio_url) {
+    // Handle successful response
+    if (result.audio_url) {
       // Success - setup audio player
-      audioPlayer.src = data.audio_url;
+      audioPlayer.src = result.audio_url;
       audioPlayer.style.display = "block";
       
       // Setup audio event listeners
@@ -67,30 +334,50 @@ async function generateAudio() {
       // Auto-play the audio
       try {
         await audioPlayer.play();
-        showStatus("Audio generated successfully! Playing now...", "success");
+        showStatus("✅ Audio generated successfully! Playing now...", "success");
       } catch (playError) {
         console.warn("Auto-play failed:", playError);
-        showStatus("Audio generated successfully! Click play to listen.", "success");
+        showStatus("✅ Audio generated successfully! Click play to listen.", "success");
       }
       
+    } else if (result.fallback_text || result.error_type) {
+      // Handle service degradation with fallback
+      audioPlayer.style.display = "none";
+      
+      const errorInfo = parseErrorResponse(null, result);
+      const message = formatErrorMessage(errorInfo);
+      showStatus(message, "error");
+      
+      // Show fallback text prominently
+      if (result.fallback_text) {
+        textInput.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+        setTimeout(() => {
+          textInput.style.backgroundColor = "";
+        }, 3000);
+      }
     } else {
-      throw new Error(data.error || "No audio URL received from server");
+      throw new Error(result.error || "No audio URL received from server");
     }
 
   } catch (error) {
     console.error("Generation error:", error);
     
-    // Handle different types of errors
-    let errorMessage = "❌ ";
-    if (error.name === "TypeError" && error.message.includes("fetch")) {
-      errorMessage += "Network error. Please check your connection and try again.";
-    } else if (error.message.includes("HTTP error")) {
-      errorMessage += "Server error. Please try again later.";
+    if (error.errorInfo) {
+      // Use enhanced error info
+      const message = formatErrorMessage(error.errorInfo);
+      showStatus(message, "error");
     } else {
-      errorMessage += error.message || "Failed to generate audio. Please try again.";
+      // Fallback error handling
+      let errorMessage = "❌ ";
+      if (error.name === "TypeError" && error.message.includes("fetch")) {
+        errorMessage += "Network error. Please check your connection and try again.";
+      } else if (error.message.includes("HTTP error")) {
+        errorMessage += "Server error. Please try again later.";
+      } else {
+        errorMessage += error.message || "Failed to generate audio. Please try again.";
+      }
+      showStatus(errorMessage, "error");
     }
-    
-    showStatus(errorMessage, "error");
     
   } finally {
     // Reset button state
@@ -101,7 +388,7 @@ async function generateAudio() {
   }
 }
 
-function setupAudioListeners(audioPlayer) {
+function setupAudioListeners(audioPlayer, statusElement = null, autoRecord = false) {
   // Remove existing listeners to prevent duplicates
   audioPlayer.onplay = null;
   audioPlayer.onpause = null;
@@ -118,12 +405,25 @@ function setupAudioListeners(audioPlayer) {
 
   audioPlayer.onended = () => {
     console.log("Audio finished playing");
-    showStatus("Playback completed!", "success");
+    showStatus("Playback completed!", "success", statusElement);
+    
+    // Auto-start recording after AI response finishes (with a small delay)
+    if (autoRecord && !isRecording && isConversationActive) {
+      console.log("Auto-starting recording after AI response...");
+      setTimeout(() => {
+        if (!isRecording && isConversationActive) { // Double-check we're not already recording and conversation is still active
+          showStatus("Ready for your response! Recording automatically...", "loading", statusElement);
+          startRecording();
+        }
+      }, 1000); // 1 second delay to give user time to process the response
+    } else if (autoRecord && !isConversationActive) {
+      showStatus("Conversation stopped. Click 'Resume Conversation' to continue.", "success", statusElement);
+    }
   };
 
   audioPlayer.onerror = (e) => {
     console.error("Audio playback error:", e);
-    showStatus("Error playing audio. Please try generating again.", "error");
+    showStatus("Error playing audio. Please try generating again.", "error", statusElement);
   };
 
   audioPlayer.onloadstart = () => {
@@ -210,19 +510,14 @@ async function startRecording() {
     mediaRecorder.onstop = async () => {
       // Create blob from recorded chunks
       const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-      const audioUrl = URL.createObjectURL(blob);
-      
-      // Set up audio player
-      recordedAudio.src = audioUrl;
-      recordedAudio.style.display = "block";
-      
+
       // Stop all tracks to release microphone
       stream.getTracks().forEach(track => track.stop());
       
-      showStatus("Recording completed! Processing transcription...", "success", echoStatus);
+      showStatus("Recording completed! Processing with AI...", "loading", echoStatus);
       
-      // Transcribe the recording
-      await transcribeAudio(blob);
+      // Send to LLM for AI response (transcribe -> LLM -> TTS)
+      await queryLLMWithAudio(blob);
     };
 
     mediaRecorder.onerror = (event) => {
@@ -326,6 +621,155 @@ async function transcribeAudio(blob) {
   }
 }
 
+// Enhanced LLM Query with Audio: Send recording to /agent/chat/{session_id} and play AI response audio
+async function queryLLMWithAudio(blob) {
+  const echoStatus = document.getElementById("echo-status");
+  const recordedAudio = document.getElementById("recorded-audio");
+  const transcriptionResult = document.getElementById("transcription-result");
+  const transcriptionText = document.getElementById("transcription-text");
+
+  // Get current session ID
+  const sessionId = getOrCreateSessionId();
+
+  try {
+    const result = await retryWithBackoff(async () => {
+      showStatus("🎤 Transcribing → 🤖 AI thinking → 🔊 Generating voice...", "loading", echoStatus);
+
+      const formData = new FormData();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `recording_${timestamp}.webm`;
+      formData.append("file", blob, filename);
+      formData.append("model", "gemini-1.5-flash");
+      formData.append("temperature", "0.7");
+      formData.append("voiceId", "en-US-natalie");
+
+      const response = await fetchWithTimeout(`/agent/chat/${encodeURIComponent(sessionId)}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      // Parse response data
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.warn("Failed to parse JSON response:", jsonError);
+      }
+
+      // Check if response is ok
+      if (!response.ok) {
+        const errorInfo = parseErrorResponse(response, data);
+        const error = new Error(errorInfo.message);
+        error.errorInfo = errorInfo;
+        throw error;
+      }
+
+      return data;
+    });
+
+    // Handle successful responses with potential service degradation
+    let statusMessage = "";
+    let statusType = "success";
+
+    if (result.is_fallback) {
+      // This is a fallback response from API failures
+      const errorInfo = parseErrorResponse(null, result);
+      statusMessage = `${ERROR_CONFIG.ERROR_MESSAGES[result.error_type] || '⚠️'} Service degradation. Fallback response: ${result.llm_response}`;
+      statusType = "error";
+    } else if (result.error_type === "TTS_ERROR") {
+      // TTS failed but we have text response
+      statusMessage = "🔊 Audio generation failed. Showing text response only.";
+      statusType = "error";
+    } else if (result.tts_error) {
+      // Another form of TTS error
+      statusMessage = "🔊 Audio generation had issues. Response displayed as text.";
+      statusType = "error";
+    }
+
+    // Update transcription UI if provided
+    if (result.transcription && transcriptionText && transcriptionResult) {
+      let displayText = `You said: "${result.transcription}"\n\nAI Response: ${result.llm_response}`;
+      
+      // Add error context if this was a fallback
+      if (result.is_fallback) {
+        displayText += `\n\n⚠️ Note: This was a fallback response due to ${result.error_type}`;
+      }
+      
+      transcriptionText.textContent = displayText;
+      transcriptionResult.style.display = "block";
+      
+      // Show session info in meta
+      const metaElement = document.getElementById("transcription-meta");
+      if (metaElement) {
+        let metaText = `Session: ${sessionId} • Messages: ${result.message_count || 0} • Model: ${result.model || 'gemini-1.5-flash'}`;
+        if (result.is_fallback) {
+          metaText += ` • Fallback Mode`;
+        }
+        metaElement.textContent = metaText;
+      }
+    }
+
+    // Handle audio playback or text-only response
+    if (result.audio_url) {
+      // Play AI response audio
+      recordedAudio.src = result.audio_url;
+      recordedAudio.style.display = "block";
+      setupAudioListeners(recordedAudio, echoStatus, true); // Pass true for auto-record
+
+      try {
+        await recordedAudio.play();
+        showStatus(statusMessage || "✅ AI response ready! Playing now...", statusType, echoStatus);
+      } catch (playErr) {
+        console.warn("Autoplay blocked:", playErr);
+        showStatus(statusMessage || "✅ AI response ready! Click play to listen.", statusType, echoStatus);
+      }
+    } else {
+      // Text-only response (TTS failed or fallback)
+      recordedAudio.style.display = "none";
+      
+      if (!statusMessage) {
+        statusMessage = "✅ Response ready! Text-only mode. You can record your next message.";
+        statusType = "success";
+      }
+      
+      showStatus(statusMessage, statusType, echoStatus);
+      
+      // Auto-start recording after a delay if conversation is active
+      if (isConversationActive && !isRecording) {
+        setTimeout(() => {
+          if (!isRecording && isConversationActive) {
+            showStatus("🎤 Ready for your response! Recording automatically...", "loading", echoStatus);
+            startRecording();
+          }
+        }, 2000); // 2 second delay for text-only responses
+      }
+    }
+    
+  } catch (error) {
+    console.error("Chat query failed:", error);
+    
+    if (error.errorInfo) {
+      // Use enhanced error info
+      const message = formatErrorMessage(error.errorInfo);
+      showStatus(message, "error", echoStatus);
+      
+      // For certain errors, suggest specific actions
+      if (error.errorInfo.type === 'QUOTA_ERROR') {
+        setTimeout(() => {
+          showStatus("💡 Consider upgrading your plan for unlimited conversations!", "loading", echoStatus);
+        }, 3000);
+      } else if (error.errorInfo.type === 'NETWORK_ERROR') {
+        setTimeout(() => {
+          showStatus("🔄 Try recording a shorter message or check your internet connection.", "loading", echoStatus);
+        }, 3000);
+      }
+    } else {
+      // Fallback error handling
+      showStatus(`❌ AI query failed: ${error.message}`, "error", echoStatus);
+    }
+  }
+}
+
 function stopRecording() {
   if (!isRecording || !mediaRecorder) return;
 
@@ -346,7 +790,6 @@ function stopRecording() {
   startBtn.disabled = false;
   stopBtn.disabled = true;
   startBtn.classList.remove("recording");
-  startIcon.textContent = "🎙️";
   startText.textContent = "Start Recording";
   timer.style.display = "none";
   timer.textContent = "00:00";
@@ -434,6 +877,16 @@ document.addEventListener("keydown", function(event) {
       copyTranscription();
     }
   }
+
+  // Ctrl+Shift+S to stop/resume conversation
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "S") {
+    event.preventDefault();
+    if (isConversationActive) {
+      stopConversation();
+    } else {
+      resumeConversation();
+    }
+  }
 });
 
 document.getElementById("text-input").addEventListener("input", function(event) {
@@ -468,6 +921,11 @@ document.getElementById("text-input").addEventListener("input", function() {
 document.addEventListener("DOMContentLoaded", function() {
   console.log("Voice Agent with Echo Bot and Transcription initialized");
   
+  // Initialize session ID
+  currentSessionId = getOrCreateSessionId();
+  console.log(`Initialized with session ID: ${currentSessionId}`);
+  updateSessionDisplay();
+  
   // Focus on text input
   focusInput();
   
@@ -475,6 +933,26 @@ document.addEventListener("DOMContentLoaded", function() {
   document.getElementById("generate-btn").addEventListener("click", generateAudio);
   document.getElementById("start-record-btn").addEventListener("click", startRecording);
   document.getElementById("stop-record-btn").addEventListener("click", stopRecording);
+  
+  // Add event listener for new session button
+  const newSessionBtn = document.getElementById("new-session-btn");
+  if (newSessionBtn) {
+    newSessionBtn.addEventListener("click", createNewSession);
+  }
+  
+  // Add event listeners for conversation control buttons
+  const stopConversationBtn = document.getElementById("stop-conversation-btn");
+  const resumeConversationBtn = document.getElementById("resume-conversation-btn");
+  
+  if (stopConversationBtn) {
+    stopConversationBtn.addEventListener("click", stopConversation);
+  }
+  if (resumeConversationBtn) {
+    resumeConversationBtn.addEventListener("click", resumeConversation);
+  }
+  
+  // Initialize conversation controls UI
+  updateConversationControls();
   
   // Add event listeners for transcription buttons (if they exist)
   const copyBtn = document.getElementById("copy-transcription-btn");
@@ -532,5 +1010,6 @@ window.voiceAgent = {
   stopRecording,
   transcribeAudio,
   copyTranscription,
-  clearTranscription
+  clearTranscription,
+  queryLLMWithAudio,
 };

@@ -5,6 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Voice Agent - Sound Sculpt Engine</title>
   <style>
+    /* =================================================================
+       DESIGN SYSTEM - Design Tokens & Variables
+       ================================================================= */
+    :root {
+      /* Colors */
+      --color-primary: rgba(59, 130, 246, 0.15);
+      --color-primary-border: rgba(59, 130, 246, 0.3);
+      --color-primary-hover: rgba(59, 130, 246, 0.25);
+      --color-primary-border-hover: rgba(59, 130, 246, 0.4);
+      --color-primary-focus: rgba(59, 130, 246, 0.4);
+      --color-primary-shadow: rgba(59, 130, 246, 0.2);
+      
+      --color-danger: rgba(239, 68, 68, 0.15);
+      --color-danger-border: rgba(239, 68, 68, 0.3);
+      --color-danger-hover: rgba(239, 68, 68, 0.25);
+      --color-danger-border-hover: rgba(239, 68, 68, 0.4);
+      --color-danger-focus: rgba(239, 68, 68, 0.4);
+      --color-danger-shadow: rgba(239, 68, 68, 0.2);
+      
+      --color-success: rgba(34, 197, 94, 0.15);
+      --color-success-border: rgba(34, 197, 94, 0.3);
+      --color-success-hover: rgba(34, 197, 94, 0.25);
+      --color-success-border-hover: rgba(34, 197, 94, 0.4);
+      --color-success-focus: rgba(34, 197, 94, 0.4);
+      --color-success-shadow: rgba(34, 197, 94, 0.2);
+      
+      --color-neutral: rgba(255, 255, 255, 0.1);
+      --color-neutral-border: rgba(255, 255, 255, 0.2);
+      --color-neutral-hover: rgba(255, 255, 255, 0.15);
+      --color-neutral-border-hover: rgba(255, 255, 255, 0.3);
+      --color-neutral-focus: rgba(255, 255, 255, 0.3);
+      --color-neutral-shadow: rgba(0, 0, 0, 0.3);
+      
+      --color-recording: rgba(220, 20, 60, 0.2);
+      --color-recording-border: rgba(220, 20, 60, 0.4);
+      --color-text: #e8f4fd;
+      
+      /* Typography */
+      --font-family-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      --font-family-mono: 'Monaco', 'Courier New', monospace;
+      --font-weight-normal: 600;
+      --font-weight-bold: 700;
+      
+      /* Spacing & Sizing */
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 12px;
+      --spacing-lg: 16px;
+      --spacing-xl: 20px;
+      --spacing-xxl: 28px;
+      
+      /* Button Dimensions */
+      --btn-height-sm: 40px;
+      --btn-height-md: 48px;
+      --btn-height-lg: 56px;
+      --btn-min-width-sm: 120px;
+      --btn-min-width-md: 140px;
+      --btn-min-width-lg: 180px;
+      --btn-border-radius-sm: 10px;
+      --btn-border-radius-md: 12px;
+      
+      /* Effects */
+      --shadow-base: 0 4px 16px rgba(0, 0, 0, 0.2);
+      --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.3);
+      --shadow-focus-ring: 0 0 0 2px;
+      --transition-base: all 0.2s ease;
+      --transform-hover: translateY(-2px);
+      --transform-active: translateY(-1px) scale(1.01);
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -221,88 +291,142 @@
       font-weight: 500;
     }
 
-    /* Button Styles */
+    /* =================================================================
+       UNIFIED BUTTON SYSTEM
+       ================================================================= */
+    
+    /* Button Container */
     .button-container {
       margin-bottom: 32px;
       display: flex;
-      gap: 16px;
+      gap: var(--spacing-lg);
       flex-wrap: wrap;
       justify-content: center;
     }
 
-    .btn, .generate-btn, .record-btn {
-      background: rgba(255, 255, 255, 0.1);
-      color: #e8f4fd;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 14px 28px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
+    /* Base Button Styles - All buttons inherit from this */
+    .btn, 
+    .generate-btn, 
+    .record-btn,
+    .primary-record-btn,
+    .secondary-record-btn,
+    .chat-control-btn {
+      /* Base Properties - ALL BUTTONS USE SAME COLOR AS GENERATE VOICE */
+      background: var(--color-primary);
+      color: var(--color-text);
+      border: 1px solid var(--color-primary-border);
+      font-family: var(--font-family-primary);
+      font-weight: var(--font-weight-normal);
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: var(--transition-base);
+      box-shadow: var(--shadow-base);
+      
+      /* Layout */
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      min-width: 140px;
       justify-content: center;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      gap: var(--spacing-sm);
+      
+      /* Typography */
+      text-decoration: none;
+      text-align: center;
+      line-height: 1.2;
+      
+      /* Interaction States */
+      user-select: none;
+      outline: none;
+      
+      /* Default Size (Medium) */
+      padding: 14px var(--spacing-xxl);
+      border-radius: var(--btn-border-radius-md);
+      font-size: 16px;
+      min-width: var(--btn-min-width-md);
+      min-height: var(--btn-height-md);
     }
 
-    .btn:hover:not(:disabled), .generate-btn:hover:not(:disabled), .record-btn:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: rgba(255, 255, 255, 0.3);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    /* Hover State - Universal */
+    .btn:hover:not(:disabled), 
+    .generate-btn:hover:not(:disabled), 
+    .record-btn:hover:not(:disabled),
+    .primary-record-btn:hover:not(:disabled),
+    .secondary-record-btn:hover:not(:disabled),
+    .chat-control-btn:hover:not(:disabled) {
+      background: var(--color-primary-hover);
+      border-color: var(--color-primary-border-hover);
+      transform: var(--transform-hover);
+      box-shadow: var(--shadow-hover), 0 2px 12px var(--color-primary-shadow);
     }
 
-    .btn:active, .generate-btn:active, .record-btn:active {
-      transform: translateY(-1px) scale(1.01);
+    /* Active State - Universal */
+    .btn:active, 
+    .generate-btn:active, 
+    .record-btn:active,
+    .primary-record-btn:active,
+    .secondary-record-btn:active,
+    .chat-control-btn:active {
+      transform: var(--transform-active);
     }
 
-    .btn:disabled, .generate-btn:disabled, .record-btn:disabled {
+    /* Disabled State - Universal */
+    .btn:disabled, 
+    .generate-btn:disabled, 
+    .record-btn:disabled,
+    .primary-record-btn:disabled,
+    .secondary-record-btn:disabled,
+    .chat-control-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
       transform: none;
       filter: grayscale(30%);
     }
 
+    /* Focus State - Universal */
+    .btn:focus, 
+    .generate-btn:focus, 
+    .record-btn:focus,
+    .primary-record-btn:focus,
+    .secondary-record-btn:focus,
+    .chat-control-btn:focus {
+      box-shadow: var(--shadow-base), var(--shadow-focus-ring) var(--color-primary-focus);
+    }
+
+    /* =================================================================
+       BUTTON SIZE VARIANTS
+       ================================================================= */
+    
+    /* Small Buttons */
     .btn-small {
-      padding: 10px 20px;
+      padding: 10px var(--spacing-xl);
       font-size: 14px;
-      min-width: 120px;
-      font-weight: 600;
-      border-radius: 10px;
+      min-width: var(--btn-min-width-sm);
+      min-height: var(--btn-height-sm);
+      border-radius: var(--btn-border-radius-sm);
     }
+
+    /* Large Buttons */
+    .btn-large {
+      padding: var(--spacing-lg) 32px;
+      font-size: 18px;
+      min-width: var(--btn-min-width-lg);
+      min-height: var(--btn-height-lg);
+      font-weight: var(--font-weight-bold);
+    }
+
+    /* =================================================================
+       ALL BUTTONS USE SAME COLOR AS GENERATE VOICE BUTTON
+       ================================================================= */
     
-    .btn-primary {
-      background: rgba(59, 130, 246, 0.15);
-      border-color: rgba(59, 130, 246, 0.3);
-      color: #e8f4fd;
-    }
-    
-    .btn-primary:hover:not(:disabled) {
-      background: rgba(59, 130, 246, 0.25);
-      border-color: rgba(59, 130, 246, 0.4);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
-    }
+    /* All buttons now inherit the same primary blue color from the base styles above */
 
-    .btn-danger {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: rgba(239, 68, 68, 0.3);
-      color: #e8f4fd;
-    }
+    /* =================================================================
+       SPECIAL STATES
+       ================================================================= */
 
-    .btn-danger:hover:not(:disabled) {
-      background: rgba(239, 68, 68, 0.25);
-      border-color: rgba(239, 68, 68, 0.4);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.2);
-    }
-
-    .recording {
-      background: rgba(220, 20, 60, 0.2) !important;
-      border-color: rgba(220, 20, 60, 0.4) !important;
+    /* Recording State */
+    .recording,
+    .primary-record-btn.recording {
+      background: var(--color-recording) !important;
+      border-color: var(--color-recording-border) !important;
       animation: pulse-recording 1.5s ease-in-out infinite alternate;
     }
 
@@ -458,19 +582,7 @@
       to { transform: rotate(360deg); }
     }
 
-    .timer {
-      font-size: 20px;
-      font-weight: 600;
-      color: #e8f4fd;
-      margin: 12px 0;
-      font-family: 'Monaco', 'Courier New', monospace;
-      display: none;
-      text-align: center;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 8px 16px;
-    }
+
 
     /* Keyboard Shortcuts */
     .keyboard-shortcuts {
@@ -602,6 +714,128 @@
       background: rgba(255, 255, 255, 0.2);
       border-radius: 3px;
     }
+
+    /* AI Voice Assistant Layout */
+    .assistant-section {
+      margin: 24px 0;
+      text-align: center;
+    }
+
+    /* Session Info Card */
+    .session-info-card {
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 8px;
+    }
+
+    .session-label {
+      color: rgba(59, 130, 246, 0.9);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .session-id-display {
+      color: rgba(232, 244, 253, 0.8);
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 6px;
+      display: inline-block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Recording Controls */
+    .recording-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+
+
+
+
+    .recording-timer {
+      font-size: 20px;
+      font-weight: 700;
+      color: #e8f4fd;
+      font-family: 'Monaco', 'Courier New', monospace;
+      display: none;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 16px;
+      margin: 0 auto;
+      max-width: fit-content;
+    }
+
+    /* Chat Management */
+    .chat-management {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 20px 16px 16px;
+    }
+
+    .chat-controls-header {
+      color: rgba(232, 244, 253, 0.7);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    .chat-controls-grid {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+
+
+
+
+    /* Mobile Responsive Design */
+    @media (max-width: 768px) {
+      .recording-controls {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .primary-record-btn,
+      .secondary-record-btn {
+        min-width: 200px;
+        padding: 16px 24px;
+      }
+
+      .chat-controls-grid {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .chat-control-btn {
+        min-width: 200px;
+        padding: 14px 20px;
+      }
+
+      .session-id-display {
+        max-width: 250px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -643,34 +877,60 @@
         <div id="status" class="status"></div>
       </div>
 
-      <!-- Speech-to-Text Card -->
+      <!-- AI Voice Assistant Card - Redesigned for better organization and alignment -->
       <div class="card">
-        <div class="card-icon">🎙️</div>
-        <h2 class="card-title">Speech to Text</h2>
-        <p class="card-description">Record your voice and get instant AI-powered transcription with crystal clear accuracy</p>
-
-        <div class="button-container">
-          <button id="start-record-btn" class="record-btn start-recording">
-            <span id="start-record-icon"></span>
-            <span id="start-record-text">Start Recording</span>
-          </button>
-          <button id="stop-record-btn" class="record-btn stop-recording" disabled>
-            <span></span>
-            <span>Stop Recording</span>
-          </button>
+        <div class="card-icon">🤖</div>
+        <h2 class="card-title">AI Voice Assistant</h2>
+        <p class="card-description">Talk to AI! Record your question and get an intelligent response spoken back in a natural voice</p>
+        
+        <!-- Session Info Section -->
+        <div class="assistant-section">
+          <div class="session-info-card">
+            <div class="session-label">Current Session</div>
+            <div id="session-display" class="session-id-display">Loading session...</div>
+          </div>
         </div>
 
-        <div id="timer" class="timer">00:00</div>
+        <!-- Main Recording Controls -->
+        <div class="assistant-section">
+          <div class="recording-controls">
+            <button id="start-record-btn" class="primary-record-btn">
+              <span id="start-record-text">Start Recording</span>
+            </button>
+            <button id="stop-record-btn" class="secondary-record-btn" disabled>
+              <span>Stop Recording</span>
+            </button>
+          </div>
+          <div id="timer" class="recording-timer">00:00</div>
+        </div>
+
+        <!-- Chat Management Controls -->
+        <div class="assistant-section">
+          <div class="chat-management">
+            <div class="chat-controls-header">Chat Management</div>
+            <div class="chat-controls-grid">
+              <button id="new-session-btn" class="chat-control-btn btn-small new-chat-btn">
+                New Chat
+              </button>
+              <button id="stop-conversation-btn" class="chat-control-btn btn-small stop-conversation-btn">
+                Stop Conversation
+              </button>
+              <button id="resume-conversation-btn" class="chat-control-btn btn-small resume-conversation-btn" style="display: none;">
+                Resume Conversation
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div class="audio-container">
           <audio id="recorded-audio" class="audio-player" controls style="display: none;"></audio>
         </div>
 
-        <!-- Transcription Result Container -->
+        <!-- AI Conversation Container -->
         <div id="transcription-result" class="transcription-container">
           <div class="transcription-header">
-            <span></span>
-            <span>Transcription Result</span>
+            <span>🤖</span>
+            <span>AI Conversation</span>
           </div>
           <div id="transcription-text" class="transcription-text"></div>
           <div class="transcription-actions">
@@ -695,15 +955,16 @@
         <span class="shortcut">Ctrl + Enter</span> Generate Audio
         <span class="shortcut">Space</span> Start/Stop Recording
         <span class="shortcut">Ctrl + C</span> Copy Transcription
+        <span class="shortcut">Ctrl + Shift + S</span> Stop/Resume Conversation
         <span class="shortcut">Esc</span> Clear Status Messages
       </div>
     </div>
 
     <div class="footer">
-      Built with <span class="heart">❤️</span> by Pranjal | #30DaysOfCode | Day 6: AI Transcription
+      Built with <span class="heart">❤️</span> by Pranjal | #30DaysOfCode 
     </div>
   </div>
 
-  <script src="/static/script.js"></script>
+  <script src="/static/script.js?v=2025-final-fix"></script>
 </body>
 </html>

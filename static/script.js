@@ -1,52 +1,66 @@
-// Voice Agent Script
-let isGenerating = false;
+// Enhanced Voice Agent Script - Professional UI
+let isRecording = false;
+let isProcessing = false;
+let mediaRecorder;
+let recordedChunks = [];
+let recordingTimer;
+let startTime;
+let currentSessionId = null;
+let isConversationActive = true;
 
-// Error handling and retry configuration
+// Error handling configuration
 const ERROR_CONFIG = {
   MAX_RETRIES: 3,
   RETRY_DELAY_MS: 2000,
   TIMEOUT_MS: 30000,
   
-  // Error types that can be retried
   RETRYABLE_ERRORS: [
     'NETWORK_ERROR',
     'TIMEOUT_ERROR',
     'GENERAL_ERROR'
   ],
   
-  // User-friendly error messages
   ERROR_MESSAGES: {
-    'STT_ERROR': '🎤 Speech recognition failed',
-    'LLM_ERROR': '🤖 AI processing failed',
-    'TTS_ERROR': '🔊 Audio generation failed',
-    'NETWORK_ERROR': '🌐 Network connection failed',
-    'AUTH_ERROR': '🔑 Authentication failed',
-    'QUOTA_ERROR': '📊 Daily limit reached',
-    'TIMEOUT_ERROR': '⏱️ Request timed out',
-    'GENERAL_ERROR': '⚠️ Something went wrong'
+    'STT_ERROR': 'Speech recognition failed',
+    'LLM_ERROR': 'AI processing failed',
+    'TTS_ERROR': 'Audio generation failed',
+    'NETWORK_ERROR': 'Network connection failed',
+    'AUTH_ERROR': 'Authentication failed',
+    'QUOTA_ERROR': 'Daily limit reached',
+    'TIMEOUT_ERROR': 'Request timed out',
+    'GENERAL_ERROR': 'Something went wrong'
   }
 };
 
-// Session management
-let currentSessionId = null;
+// DOM Elements
+const elements = {
+  recordBtn: document.getElementById('main-record-btn'),
+  recordIcon: document.getElementById('record-icon'),
+  recordStatus: document.getElementById('record-status'),
+  recordingTimer: document.getElementById('recording-timer'),
+  conversationDisplay: document.getElementById('conversation-display'),
+  conversationText: document.getElementById('conversation-text'),
+  conversationMeta: document.getElementById('conversation-meta'),
+  statusMessage: document.getElementById('status-message'),
+  sessionDisplay: document.getElementById('session-display'),
+  aiAudio: document.getElementById('ai-response-audio'),
+  newSessionBtn: document.getElementById('new-session-btn'),
+  copyBtn: document.getElementById('copy-conversation-btn'),
+  clearBtn: document.getElementById('clear-conversation-btn'),
+  toggleBtn: document.getElementById('toggle-conversation-btn'),
+  toggleIcon: document.getElementById('toggle-icon')
+};
 
-// Conversation control
-let isConversationActive = true;
-
-// Get or create session ID from URL params
+// Session Management
 function getOrCreateSessionId() {
   const urlParams = new URLSearchParams(window.location.search);
   let sessionId = urlParams.get('session_id');
   
   if (!sessionId) {
-    // Generate a new session ID
     sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    // Update URL with new session ID
     urlParams.set('session_id', sessionId);
     const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
     window.history.replaceState({}, '', newUrl);
-    
     console.log(`Generated new session ID: ${sessionId}`);
   } else {
     console.log(`Using existing session ID: ${sessionId}`);
@@ -55,90 +69,133 @@ function getOrCreateSessionId() {
   return sessionId;
 }
 
-// Update session display in UI
 function updateSessionDisplay() {
-  const sessionDisplay = document.getElementById("session-display");
-  if (sessionDisplay && currentSessionId) {
-    sessionDisplay.textContent = `Session: ${currentSessionId}`;
+  if (elements.sessionDisplay && currentSessionId) {
+    elements.sessionDisplay.textContent = currentSessionId;
   }
 }
 
-// Create new chat session
 function createNewSession() {
-  // Generate new session ID
   const newSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   
-  // Update URL
   const urlParams = new URLSearchParams(window.location.search);
   urlParams.set('session_id', newSessionId);
   const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
   window.history.pushState({}, '', newUrl);
   
-  // Update current session
   currentSessionId = newSessionId;
   updateSessionDisplay();
   
-  // Clear UI
-  const transcriptionResult = document.getElementById("transcription-result");
-  const transcriptionText = document.getElementById("transcription-text");
-  const recordedAudio = document.getElementById("recorded-audio");
-  const echoStatus = document.getElementById("echo-status");
-  
-  if (transcriptionResult) transcriptionResult.style.display = "none";
-  if (transcriptionText) transcriptionText.textContent = "";
-  if (recordedAudio) recordedAudio.style.display = "none";
-  if (echoStatus) hideStatus(echoStatus);
+  // Clear conversation display
+  hideConversation();
   
   console.log(`Created new session: ${newSessionId}`);
-  showStatus("New chat session started!", "success", document.getElementById("echo-status"));
+  showStatus("New chat session started!", "success");
 }
 
-// Stop the conversation (disable auto-recording)
-function stopConversation() {
-  isConversationActive = false;
+// UI State Management
+function updateRecordButtonState(state) {
+  elements.recordBtn.classList.remove('recording', 'processing');
+  elements.recordingTimer.classList.remove('visible');
   
-  // Stop any ongoing recording
-  if (isRecording) {
+  switch (state) {
+    case 'idle':
+      // Use microphone SVG
+      elements.recordIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+      `;
+      elements.recordStatus.textContent = 'Tap to start conversation';
+      break;
+    case 'recording':
+      elements.recordBtn.classList.add('recording');
+      // Use stop SVG
+      elements.recordIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
+        </svg>
+      `;
+      elements.recordStatus.innerHTML = 'Recording... <span style="color: var(--color-recording-solid)">●</span>';
+      elements.recordingTimer.classList.add('visible');
+      break;
+    case 'processing':
+      elements.recordBtn.classList.add('processing');
+      // Use processing SVG
+      elements.recordIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      `;
+      elements.recordStatus.textContent = 'Processing with AI...';
+      break;
+  }
+}
+
+function showStatus(message, type = 'loading', duration = 0) {
+  elements.statusMessage.className = `status-message ${type}`;
+  
+  if (type === 'loading') {
+    elements.statusMessage.innerHTML = `<div class="spinner"></div> ${message}`;
+  } else {
+    elements.statusMessage.innerHTML = message;
+  }
+  
+  elements.statusMessage.classList.add('visible');
+  
+  if (duration > 0) {
+    setTimeout(() => hideStatus(), duration);
+  } else if (type === 'error') {
+    setTimeout(() => hideStatus(), 5000);
+  }
+}
+
+function hideStatus() {
+  elements.statusMessage.classList.remove('visible');
+}
+
+function showConversation(userText, aiResponse, metadata = {}) {
+  const displayText = `You: "${userText}"\n\nAI: ${aiResponse}`;
+  elements.conversationText.textContent = displayText;
+  
+  // Update metadata
+  let metaText = `Session: ${currentSessionId}`;
+  if (metadata.messageCount) metaText += ` • Messages: ${metadata.messageCount}`;
+  if (metadata.model) metaText += ` • Model: ${metadata.model}`;
+  if (metadata.isFallback) metaText += ` • Fallback Mode`;
+  
+  elements.conversationMeta.textContent = metaText;
+  elements.conversationDisplay.classList.add('visible');
+}
+
+function hideConversation() {
+  elements.conversationDisplay.classList.remove('visible');
+  elements.conversationText.textContent = '';
+  elements.conversationMeta.textContent = '';
+}
+
+function updateTimer() {
+  if (!isRecording) return;
+
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  
+  elements.recordingTimer.textContent = 
+    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+  // Auto-stop after 5 minutes
+  if (elapsed >= 300) {
     stopRecording();
-  }
-  
-  // Update UI buttons
-  updateConversationControls();
-  
-  console.log("Conversation stopped");
-  showStatus("Conversation stopped. You can still record manually or click 'Resume Conversation'.", "success", document.getElementById("echo-status"));
-}
-
-// Resume the conversation (re-enable auto-recording)
-function resumeConversation() {
-  isConversationActive = true;
-  
-  // Update UI buttons
-  updateConversationControls();
-  
-  console.log("Conversation resumed");
-  showStatus("Conversation resumed. Auto-recording will start after AI responses.", "success", document.getElementById("echo-status"));
-}
-
-// Update conversation control buttons
-function updateConversationControls() {
-  const stopBtn = document.getElementById("stop-conversation-btn");
-  const resumeBtn = document.getElementById("resume-conversation-btn");
-  
-  if (stopBtn && resumeBtn) {
-    if (isConversationActive) {
-      stopBtn.style.display = "block";
-      resumeBtn.style.display = "none";
-    } else {
-      stopBtn.style.display = "none";
-      resumeBtn.style.display = "block";
-    }
+    showStatus("Recording stopped automatically after 5 minutes.", "error");
   }
 }
 
-// Enhanced Error Handling Functions
+// Error Handling Functions
 function parseErrorResponse(response, data) {
-  // Try to parse enhanced error response from server
   if (data && data.error_type) {
     return {
       type: data.error_type,
@@ -150,7 +207,6 @@ function parseErrorResponse(response, data) {
     };
   }
   
-  // Fallback to basic error parsing
   const statusCode = response?.status || 0;
   let errorType = 'GENERAL_ERROR';
   let message = 'An unexpected error occurred';
@@ -180,15 +236,14 @@ function parseErrorResponse(response, data) {
 }
 
 function formatErrorMessage(errorInfo) {
-  const icon = ERROR_CONFIG.ERROR_MESSAGES[errorInfo.type] || '⚠️';
-  let message = `${icon} ${errorInfo.message}`;
+  let message = `${ERROR_CONFIG.ERROR_MESSAGES[errorInfo.type] || 'Error'}: ${errorInfo.message}`;
   
   if (errorInfo.retryable) {
-    message += '\n🔄 This error can be retried automatically.';
+    message += '<br>This error can be retried automatically.';
   }
   
   if (errorInfo.suggestion) {
-    message += `\n💡 ${errorInfo.suggestion}`;
+    message += `<br>${errorInfo.suggestion}`;
   }
   
   return message;
@@ -201,29 +256,27 @@ async function retryWithBackoff(asyncFunction, maxRetries = ERROR_CONFIG.MAX_RET
     try {
       const result = await asyncFunction();
       if (attempt > 1) {
-        console.log(`✅ Retry successful on attempt ${attempt}`);
+        console.log(`Retry successful on attempt ${attempt}`);
       }
       return result;
     } catch (error) {
       lastError = error;
-      console.warn(`❌ Attempt ${attempt} failed:`, error.message);
+      console.warn(`Attempt ${attempt} failed:`, error.message);
       
-      // Don't retry non-retryable errors
       if (error.errorInfo && !error.errorInfo.retryable) {
-        console.log(`🚫 Error type '${error.errorInfo.type}' is not retryable`);
+        console.log(`Error type '${error.errorInfo.type}' is not retryable`);
         throw error;
       }
       
-      // Don't wait after the last attempt
       if (attempt < maxRetries) {
-        const delay = ERROR_CONFIG.RETRY_DELAY_MS * Math.pow(1.5, attempt - 1); // Exponential backoff
-        console.log(`⏳ Waiting ${delay}ms before retry...`);
+        const delay = ERROR_CONFIG.RETRY_DELAY_MS * Math.pow(1.5, attempt - 1);
+        console.log(`Waiting ${delay}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
   
-  console.error(`❌ All ${maxRetries} retry attempts failed`);
+  console.error(`All ${maxRetries} retry attempts failed`);
   throw lastError;
 }
 
@@ -254,238 +307,11 @@ async function fetchWithTimeout(url, options, timeoutMs = ERROR_CONFIG.TIMEOUT_M
   }
 }
 
-async function generateAudio() {
-  if (isGenerating) return;
-
-  const textInput = document.getElementById("text-input");
-  const status = document.getElementById("status");
-  const audioPlayer = document.getElementById("audio-player");
-  const generateBtn = document.getElementById("generate-btn");
-  const btnIcon = document.getElementById("btn-icon");
-  const btnText = document.getElementById("btn-text");
-
-  const text = textInput.value.trim();
-
-  // Input validation
-  if (!text) {
-    showStatus("❗ Please enter some text to convert to speech.", "error");
-    focusInput();
-    return;
-  }
-
-  if (text.length > 5000) {
-    showStatus("❗ Text is too long. Please keep it under 5000 characters.", "error");
-    focusInput();
-    return;
-  }
-
-  // Start generation process
-  isGenerating = true;
-  generateBtn.disabled = true;
-  audioPlayer.style.display = "none";
-  
-  // Update button to loading state
-  btnIcon.innerHTML = '<div class="spinner"></div>';
-  btnText.textContent = "Generating...";
-
-  try {
-    const result = await retryWithBackoff(async () => {
-      showStatus("Generating audio... This may take a moment.", "loading");
-      
-      const response = await fetchWithTimeout("/generate-audio", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          text: text,
-          voiceId: "en-US-natalie"
-        })
-      });
-
-      // Parse response data
-      let data = {};
-      try {
-        data = await response.json();
-      } catch (jsonError) {
-        console.warn("Failed to parse JSON response:", jsonError);
-      }
-
-      // Check if response is ok
-      if (!response.ok) {
-        const errorInfo = parseErrorResponse(response, data);
-        const error = new Error(errorInfo.message);
-        error.errorInfo = errorInfo;
-        throw error;
-      }
-
-      return data;
-    });
-
-    // Handle successful response
-    if (result.audio_url) {
-      // Success - setup audio player
-      audioPlayer.src = result.audio_url;
-      audioPlayer.style.display = "block";
-      
-      // Setup audio event listeners
-      setupAudioListeners(audioPlayer);
-      
-      // Auto-play the audio
-      try {
-        await audioPlayer.play();
-        showStatus("✅ Audio generated successfully! Playing now...", "success");
-      } catch (playError) {
-        console.warn("Auto-play failed:", playError);
-        showStatus("✅ Audio generated successfully! Click play to listen.", "success");
-      }
-      
-    } else if (result.fallback_text || result.error_type) {
-      // Handle service degradation with fallback
-      audioPlayer.style.display = "none";
-      
-      const errorInfo = parseErrorResponse(null, result);
-      const message = formatErrorMessage(errorInfo);
-      showStatus(message, "error");
-      
-      // Show fallback text prominently
-      if (result.fallback_text) {
-        textInput.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
-        setTimeout(() => {
-          textInput.style.backgroundColor = "";
-        }, 3000);
-      }
-    } else {
-      throw new Error(result.error || "No audio URL received from server");
-    }
-
-  } catch (error) {
-    console.error("Generation error:", error);
-    
-    if (error.errorInfo) {
-      // Use enhanced error info
-      const message = formatErrorMessage(error.errorInfo);
-      showStatus(message, "error");
-    } else {
-      // Fallback error handling
-      let errorMessage = "❌ ";
-      if (error.name === "TypeError" && error.message.includes("fetch")) {
-        errorMessage += "Network error. Please check your connection and try again.";
-      } else if (error.message.includes("HTTP error")) {
-        errorMessage += "Server error. Please try again later.";
-      } else {
-        errorMessage += error.message || "Failed to generate audio. Please try again.";
-      }
-      showStatus(errorMessage, "error");
-    }
-    
-  } finally {
-    // Reset button state
-    isGenerating = false;
-    generateBtn.disabled = false;
-    btnIcon.textContent = "🎵";
-    btnText.textContent = "Generate Voice";
-  }
-}
-
-function setupAudioListeners(audioPlayer, statusElement = null, autoRecord = false) {
-  // Remove existing listeners to prevent duplicates
-  audioPlayer.onplay = null;
-  audioPlayer.onpause = null;
-  audioPlayer.onended = null;
-  audioPlayer.onerror = null;
-
-  audioPlayer.onplay = () => {
-    console.log("Audio started playing");
-  };
-
-  audioPlayer.onpause = () => {
-    console.log("Audio paused");
-  };
-
-  audioPlayer.onended = () => {
-    console.log("Audio finished playing");
-    showStatus("Playback completed!", "success", statusElement);
-    
-    // Auto-start recording after AI response finishes (with a small delay)
-    if (autoRecord && !isRecording && isConversationActive) {
-      console.log("Auto-starting recording after AI response...");
-      setTimeout(() => {
-        if (!isRecording && isConversationActive) { // Double-check we're not already recording and conversation is still active
-          showStatus("Ready for your response! Recording automatically...", "loading", statusElement);
-          startRecording();
-        }
-      }, 1000); // 1 second delay to give user time to process the response
-    } else if (autoRecord && !isConversationActive) {
-      showStatus("Conversation stopped. Click 'Resume Conversation' to continue.", "success", statusElement);
-    }
-  };
-
-  audioPlayer.onerror = (e) => {
-    console.error("Audio playback error:", e);
-    showStatus("Error playing audio. Please try generating again.", "error", statusElement);
-  };
-
-  audioPlayer.onloadstart = () => {
-    console.log("Audio loading started");
-  };
-
-  audioPlayer.oncanplay = () => {
-    console.log("Audio can start playing");
-  };
-}
-
-function showStatus(message, type, statusElement = null) {
-  const status = statusElement || document.getElementById("status");
-  
-  // Hide current status
-  status.classList.remove("show");
-  
-  setTimeout(() => {
-    status.textContent = message;
-    status.className = `status ${type}`;
-    status.classList.add("show");
-    
-    // Auto-hide error messages after 5 seconds
-    if (type === "error") {
-      setTimeout(() => {
-        hideStatus(status);
-      }, 5000);
-    }
-  }, 100);
-}
-
-function hideStatus(statusElement = null) {
-  const status = statusElement || document.getElementById("status");
-  status.classList.remove("show");
-}
-
-function focusInput() {
-  const textInput = document.getElementById("text-input");
-  textInput.focus();
-}
-
-// Echo Bot Functionality
-let mediaRecorder;
-let recordedChunks = [];
-let isRecording = false;
-let recordingTimer;
-let startTime;
-
+// Recording Functions
 async function startRecording() {
-  if (isRecording) return;
-
-  const startBtn = document.getElementById("start-record-btn");
-  const stopBtn = document.getElementById("stop-record-btn");
-  const echoStatus = document.getElementById("echo-status");
-  const timer = document.getElementById("timer");
-  const startIcon = document.getElementById("start-record-icon");
-  const startText = document.getElementById("start-record-text");
-  const recordedAudio = document.getElementById("recorded-audio");
-  const transcriptionResult = document.getElementById("transcription-result");
+  if (isRecording || isProcessing) return;
 
   try {
-    // Request microphone access
     const stream = await navigator.mediaDevices.getUserMedia({ 
       audio: {
         echoCancellation: true,
@@ -494,7 +320,6 @@ async function startRecording() {
       } 
     });
 
-    // Initialize MediaRecorder
     mediaRecorder = new MediaRecorder(stream, {
       mimeType: 'audio/webm;codecs=opus'
     });
@@ -508,132 +333,63 @@ async function startRecording() {
     };
 
     mediaRecorder.onstop = async () => {
-      // Create blob from recorded chunks
-      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-
-      // Stop all tracks to release microphone
       stream.getTracks().forEach(track => track.stop());
       
-      showStatus("Recording completed! Processing with AI...", "loading", echoStatus);
+      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
       
-      // Send to LLM for AI response (transcribe -> LLM -> TTS)
+      isProcessing = true;
+      updateRecordButtonState('processing');
+      showStatus("Processing with AI...", 'loading');
+      
       await queryLLMWithAudio(blob);
     };
 
     mediaRecorder.onerror = (event) => {
       console.error("MediaRecorder error:", event.error);
-      showStatus("Recording error occurred.", "error", echoStatus);
+      showStatus("Recording error occurred.", "error");
+      updateRecordButtonState('idle');
     };
 
-    // Start recording
-    mediaRecorder.start(1000); // Collect data every second
+    mediaRecorder.start(1000);
     isRecording = true;
     startTime = Date.now();
 
-    // Update UI
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    startBtn.classList.add("recording");
-    startText.textContent = "Recording...";
-    timer.style.display = "block";
-    recordedAudio.style.display = "none";
-    
-    // Hide previous transcription
-    if (transcriptionResult) {
-      transcriptionResult.style.display = "none";
-    }
-
-    // Start timer
+    updateRecordButtonState('recording');
     recordingTimer = setInterval(updateTimer, 1000);
-
-    showStatus("Recording started! Speak into your microphone.", "loading", echoStatus);
+    showStatus("Recording started! Speak into your microphone.", "loading");
 
   } catch (error) {
     console.error("Error accessing microphone:", error);
     
-    let errorMessage = "❌ ";
+    let errorMessage = "";
     if (error.name === "NotAllowedError") {
-      errorMessage += "Microphone access denied. Please allow microphone access and try again.";
+      errorMessage = "Microphone access denied. Please allow microphone access and try again.";
     } else if (error.name === "NotFoundError") {
-      errorMessage += "No microphone found. Please connect a microphone and try again.";
+      errorMessage = "No microphone found. Please connect a microphone and try again.";
     } else {
-      errorMessage += "Failed to access microphone. Please check your device settings.";
+      errorMessage = "Failed to access microphone. Please check your device settings.";
     }
     
-    showStatus(errorMessage, "error", echoStatus);
+    showStatus(errorMessage, "error");
+    updateRecordButtonState('idle');
   }
 }
 
-// Transcribe audio using the server endpoint
-async function transcribeAudio(blob) {
-  const echoStatus = document.getElementById("echo-status");
-  const transcriptionResult = document.getElementById("transcription-result");
-  const transcriptionText = document.getElementById("transcription-text");
-  
-  const formData = new FormData();
-  
-  // Create a unique filename with timestamp
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `recording_${timestamp}.webm`;
-  
-  formData.append("file", blob, filename);
+function stopRecording() {
+  if (!isRecording || !mediaRecorder) return;
 
-  showStatus("Transcribing audio... Please wait.", "loading", echoStatus);
-
-  try {
-    const response = await fetch("/transcribe/file", {
-      method: "POST",
-      body: formData
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Transcription failed with status: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (data.transcription) {
-      // Display the transcription
-      transcriptionText.textContent = data.transcription;
-      transcriptionResult.style.display = "block";
-      
-      // Show success message with additional info
-      let successMessage = "Transcription completed!";
-      if (data.audio_duration) {
-        successMessage += ` (Duration: ${Math.round(data.audio_duration)}s)`;
-      }
-      
-      showStatus(successMessage, "success", echoStatus);
-      console.log("Transcription result:", data);
-    } else {
-      throw new Error("No transcription received from server");
-    }
-
-  } catch (err) {
-    console.error("Transcription failed:", err);
-    showStatus(`Transcription failed: ${err.message}`, "error", echoStatus);
-    
-    // Hide transcription result on error
-    if (transcriptionResult) {
-      transcriptionResult.style.display = "none";
-    }
-  }
+  mediaRecorder.stop();
+  isRecording = false;
+  clearInterval(recordingTimer);
 }
 
-// Enhanced LLM Query with Audio: Send recording to /agent/chat/{session_id} and play AI response audio
+// AI Integration
 async function queryLLMWithAudio(blob) {
-  const echoStatus = document.getElementById("echo-status");
-  const recordedAudio = document.getElementById("recorded-audio");
-  const transcriptionResult = document.getElementById("transcription-result");
-  const transcriptionText = document.getElementById("transcription-text");
-
-  // Get current session ID
   const sessionId = getOrCreateSessionId();
 
   try {
     const result = await retryWithBackoff(async () => {
-      showStatus("🎤 Transcribing → 🤖 AI thinking → 🔊 Generating voice...", "loading", echoStatus);
+      showStatus("Transcribing → AI thinking → Generating voice...", 'loading');
 
       const formData = new FormData();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -648,7 +404,6 @@ async function queryLLMWithAudio(blob) {
         body: formData,
       });
 
-      // Parse response data
       let data = {};
       try {
         data = await response.json();
@@ -656,7 +411,6 @@ async function queryLLMWithAudio(blob) {
         console.warn("Failed to parse JSON response:", jsonError);
       }
 
-      // Check if response is ok
       if (!response.ok) {
         const errorInfo = parseErrorResponse(response, data);
         const error = new Error(errorInfo.message);
@@ -667,81 +421,57 @@ async function queryLLMWithAudio(blob) {
       return data;
     });
 
-    // Handle successful responses with potential service degradation
+    // Handle response
     let statusMessage = "";
     let statusType = "success";
 
     if (result.is_fallback) {
-      // This is a fallback response from API failures
       const errorInfo = parseErrorResponse(null, result);
-      statusMessage = `${ERROR_CONFIG.ERROR_MESSAGES[result.error_type] || '⚠️'} Service degradation. Fallback response: ${result.llm_response}`;
+      statusMessage = `${ERROR_CONFIG.ERROR_MESSAGES[result.error_type] || 'Service degradation'}. Fallback response provided.`;
       statusType = "error";
-    } else if (result.error_type === "TTS_ERROR") {
-      // TTS failed but we have text response
-      statusMessage = "🔊 Audio generation failed. Showing text response only.";
-      statusType = "error";
-    } else if (result.tts_error) {
-      // Another form of TTS error
-      statusMessage = "🔊 Audio generation had issues. Response displayed as text.";
+    } else if (result.error_type === "TTS_ERROR" || result.tts_error) {
+      statusMessage = "Audio generation failed. Showing text response only.";
       statusType = "error";
     }
 
-    // Update transcription UI if provided
-    if (result.transcription && transcriptionText && transcriptionResult) {
-      let displayText = `You said: "${result.transcription}"\n\nAI Response: ${result.llm_response}`;
-      
-      // Add error context if this was a fallback
-      if (result.is_fallback) {
-        displayText += `\n\n⚠️ Note: This was a fallback response due to ${result.error_type}`;
-      }
-      
-      transcriptionText.textContent = displayText;
-      transcriptionResult.style.display = "block";
-      
-      // Show session info in meta
-      const metaElement = document.getElementById("transcription-meta");
-      if (metaElement) {
-        let metaText = `Session: ${sessionId} • Messages: ${result.message_count || 0} • Model: ${result.model || 'gemini-1.5-flash'}`;
-        if (result.is_fallback) {
-          metaText += ` • Fallback Mode`;
-        }
-        metaElement.textContent = metaText;
-      }
+    // Show conversation
+    if (result.transcription && result.llm_response) {
+      const metadata = {
+        messageCount: result.message_count,
+        model: result.model,
+        isFallback: result.is_fallback
+      };
+      showConversation(result.transcription, result.llm_response, metadata);
     }
 
-    // Handle audio playback or text-only response
+    // Handle audio playback
     if (result.audio_url) {
-      // Play AI response audio
-      recordedAudio.src = result.audio_url;
-      recordedAudio.style.display = "block";
-      setupAudioListeners(recordedAudio, echoStatus, true); // Pass true for auto-record
+      elements.aiAudio.src = result.audio_url;
+      setupAudioListeners();
 
       try {
-        await recordedAudio.play();
-        showStatus(statusMessage || "✅ AI response ready! Playing now...", statusType, echoStatus);
+        await elements.aiAudio.play();
+        showStatus(statusMessage || "AI response ready! Playing now...", statusType);
       } catch (playErr) {
         console.warn("Autoplay blocked:", playErr);
-        showStatus(statusMessage || "✅ AI response ready! Click play to listen.", statusType, echoStatus);
+        showStatus(statusMessage || "AI response ready! Audio loaded.", statusType);
       }
     } else {
-      // Text-only response (TTS failed or fallback)
-      recordedAudio.style.display = "none";
-      
       if (!statusMessage) {
-        statusMessage = "✅ Response ready! Text-only mode. You can record your next message.";
+        statusMessage = "Response ready! Text-only mode.";
         statusType = "success";
       }
       
-      showStatus(statusMessage, statusType, echoStatus);
+      showStatus(statusMessage, statusType);
       
-      // Auto-start recording after a delay if conversation is active
-      if (isConversationActive && !isRecording) {
+      // Auto-start recording after delay if conversation is active
+      if (isConversationActive) {
         setTimeout(() => {
           if (!isRecording && isConversationActive) {
-            showStatus("🎤 Ready for your response! Recording automatically...", "loading", echoStatus);
+            showStatus("Ready for your response! Recording automatically...", "loading");
             startRecording();
           }
-        }, 2000); // 2 second delay for text-only responses
+        }, 2000);
       }
     }
     
@@ -749,267 +479,167 @@ async function queryLLMWithAudio(blob) {
     console.error("Chat query failed:", error);
     
     if (error.errorInfo) {
-      // Use enhanced error info
       const message = formatErrorMessage(error.errorInfo);
-      showStatus(message, "error", echoStatus);
-      
-      // For certain errors, suggest specific actions
-      if (error.errorInfo.type === 'QUOTA_ERROR') {
-        setTimeout(() => {
-          showStatus("💡 Consider upgrading your plan for unlimited conversations!", "loading", echoStatus);
-        }, 3000);
-      } else if (error.errorInfo.type === 'NETWORK_ERROR') {
-        setTimeout(() => {
-          showStatus("🔄 Try recording a shorter message or check your internet connection.", "loading", echoStatus);
-        }, 3000);
-      }
+      showStatus(message, "error");
     } else {
-      // Fallback error handling
-      showStatus(`❌ AI query failed: ${error.message}`, "error", echoStatus);
+      showStatus(`AI query failed: ${error.message}`, "error");
     }
+  } finally {
+    isProcessing = false;
+    updateRecordButtonState('idle');
   }
 }
 
-function stopRecording() {
-  if (!isRecording || !mediaRecorder) return;
+function setupAudioListeners() {
+  elements.aiAudio.onended = () => {
+    console.log("AI audio finished playing");
+    showStatus("Playback completed!", "success", 2000);
+    
+    // Auto-start recording after AI response if conversation is active
+    if (isConversationActive && !isRecording) {
+      setTimeout(() => {
+        if (!isRecording && isConversationActive) {
+          showStatus("Ready for your response! Recording automatically...", "loading");
+          startRecording();
+        }
+      }, 1000);
+    }
+  };
 
-  const startBtn = document.getElementById("start-record-btn");
-  const stopBtn = document.getElementById("stop-record-btn");
-  const timer = document.getElementById("timer");
-  const startIcon = document.getElementById("start-record-icon");
-  const startText = document.getElementById("start-record-text");
-
-  // Stop recording
-  mediaRecorder.stop();
-  isRecording = false;
-
-  // Stop timer
-  clearInterval(recordingTimer);
-
-  // Reset UI
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
-  startBtn.classList.remove("recording");
-  startText.textContent = "Start Recording";
-  timer.style.display = "none";
-  timer.textContent = "00:00";
+  elements.aiAudio.onerror = (e) => {
+    console.error("Audio playback error:", e);
+    showStatus("Error playing audio.", "error");
+  };
 }
 
-function updateTimer() {
-  if (!isRecording) return;
-
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  const minutes = Math.floor(elapsed / 60);
-  const seconds = elapsed % 60;
+// Control Functions
+function toggleConversation() {
+  isConversationActive = !isConversationActive;
   
-  document.getElementById("timer").textContent = 
-    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-  // Auto-stop after 5 minutes
-  if (elapsed >= 300) {
+  if (isRecording && !isConversationActive) {
     stopRecording();
-    showStatus("Recording stopped automatically after 5 minutes.", "loading", document.getElementById("echo-status"));
+  }
+  
+  const btn = elements.toggleBtn;
+  if (isConversationActive) {
+    btn.innerHTML = `
+      <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <rect x="9" y="9" width="6" height="6"></rect>
+      </svg>
+      Pause Auto-Record
+    `;
+    btn.className = 'control-btn success';
+    showStatus("Conversation resumed. Auto-recording enabled.", "success", 3000);
+  } else {
+    btn.innerHTML = `
+      <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polygon points="10 8 16 12 10 16 10 8"></polygon>
+      </svg>
+      Resume Auto-Record
+    `;
+    btn.className = 'control-btn';
+    showStatus("Conversation paused. Manual recording only.", "success", 3000);
   }
 }
 
-// Copy transcription to clipboard
-function copyTranscription() {
-  const transcriptionText = document.getElementById("transcription-text");
-  const echoStatus = document.getElementById("echo-status");
-  
-  if (transcriptionText && transcriptionText.textContent.trim()) {
-    navigator.clipboard.writeText(transcriptionText.textContent.trim())
-      .then(() => {
-        showStatus("📋 Transcription copied to clipboard!", "success", echoStatus);
-      })
-      .catch((err) => {
-        console.error("Failed to copy text:", err);
-        showStatus("Failed to copy transcription.", "error", echoStatus);
-      });
+function copyConversation() {
+  const text = elements.conversationText.textContent.trim();
+  if (text) {
+    navigator.clipboard.writeText(text)
+      .then(() => showStatus("Conversation copied to clipboard!", "success", 3000))
+      .catch(() => showStatus("Failed to copy conversation.", "error"));
+  } else {
+    showStatus("No conversation to copy.", "error", 3000);
   }
 }
 
-// Clear transcription
-function clearTranscription() {
-  const transcriptionResult = document.getElementById("transcription-result");
-  const transcriptionText = document.getElementById("transcription-text");
-  const echoStatus = document.getElementById("echo-status");
-  
-  if (transcriptionResult) {
-    transcriptionResult.style.display = "none";
-  }
-  if (transcriptionText) {
-    transcriptionText.textContent = "";
-  }
-  
-  showStatus("Transcription cleared.", "success", echoStatus);
+function clearConversation() {
+  hideConversation();
+  showStatus("Conversation cleared.", "success", 2000);
 }
 
-// Keyboard shortcuts
-document.addEventListener("keydown", function(event) {
-  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-    event.preventDefault();
-    generateAudio();
-  }
-  
-  // Escape to clear status
-  if (event.key === "Escape") {
-    hideStatus();
-    hideStatus(document.getElementById("echo-status"));
-  }
-
-  // Space to start/stop recording (when not focused on text input)
-  if (event.code === "Space" && document.activeElement !== document.getElementById("text-input")) {
-    event.preventDefault();
+// Event Listeners
+function setupEventListeners() {
+  // Main record button
+  elements.recordBtn.addEventListener('click', () => {
     if (isRecording) {
       stopRecording();
-    } else {
+    } else if (!isProcessing) {
       startRecording();
     }
-  }
+  });
 
-  // Ctrl+C to copy transcription
-  if ((event.ctrlKey || event.metaKey) && event.key === "c" && 
-      document.getElementById("transcription-result") && 
-      document.getElementById("transcription-result").style.display !== "none") {
-    if (document.activeElement !== document.getElementById("text-input")) {
+  // Control buttons
+  elements.newSessionBtn.addEventListener('click', createNewSession);
+  elements.copyBtn.addEventListener('click', copyConversation);
+  elements.clearBtn.addEventListener('click', clearConversation);
+  elements.toggleBtn.addEventListener('click', toggleConversation);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (event) => {
+    // Space to start/stop recording
+    if (event.code === 'Space' && !event.ctrlKey && !event.metaKey) {
       event.preventDefault();
-      copyTranscription();
+      if (isRecording) {
+        stopRecording();
+      } else if (!isProcessing) {
+        startRecording();
+      }
     }
-  }
 
-  // Ctrl+Shift+S to stop/resume conversation
-  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "S") {
-    event.preventDefault();
-    if (isConversationActive) {
-      stopConversation();
-    } else {
-      resumeConversation();
+    // Ctrl+C to copy conversation
+    if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+      if (elements.conversationDisplay.classList.contains('visible')) {
+        event.preventDefault();
+        copyConversation();
+      }
     }
-  }
-});
 
-document.getElementById("text-input").addEventListener("input", function(event) {
-  const text = event.target.value;
-  const length = text.length;
-  
-  // Update character counter
-  const charCounter = document.getElementById("char-counter");
-  if (charCounter) {
-    charCounter.textContent = `${length}/5000`;
-  }
-  
-  if (length > 4000) {
-    const remaining = 5000 - length;
-    if (remaining > 0) {
-      showStatus(`⚠️ ${remaining} characters remaining`, "loading");
-    } else {
-      showStatus("❗ Text is too long! Please reduce it.", "error");
+    // Ctrl+N for new session
+    if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+      event.preventDefault();
+      createNewSession();
     }
-  } else if (length > 0) {
-    hideStatus();
-  }
-});
 
-// Auto-resize textarea
-document.getElementById("text-input").addEventListener("input", function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-});
-
-// Initialize on page load
-document.addEventListener("DOMContentLoaded", function() {
-  console.log("Voice Agent with Echo Bot and Transcription initialized");
-  
-  // Initialize session ID
-  currentSessionId = getOrCreateSessionId();
-  console.log(`Initialized with session ID: ${currentSessionId}`);
-  updateSessionDisplay();
-  
-  // Focus on text input
-  focusInput();
-  
-  // Add event listeners for buttons
-  document.getElementById("generate-btn").addEventListener("click", generateAudio);
-  document.getElementById("start-record-btn").addEventListener("click", startRecording);
-  document.getElementById("stop-record-btn").addEventListener("click", stopRecording);
-  
-  // Add event listener for new session button
-  const newSessionBtn = document.getElementById("new-session-btn");
-  if (newSessionBtn) {
-    newSessionBtn.addEventListener("click", createNewSession);
-  }
-  
-  // Add event listeners for conversation control buttons
-  const stopConversationBtn = document.getElementById("stop-conversation-btn");
-  const resumeConversationBtn = document.getElementById("resume-conversation-btn");
-  
-  if (stopConversationBtn) {
-    stopConversationBtn.addEventListener("click", stopConversation);
-  }
-  if (resumeConversationBtn) {
-    resumeConversationBtn.addEventListener("click", resumeConversation);
-  }
-  
-  // Initialize conversation controls UI
-  updateConversationControls();
-  
-  // Add event listeners for transcription buttons (if they exist)
-  const copyBtn = document.getElementById("copy-transcription-btn");
-  const clearBtn = document.getElementById("clear-transcription-btn");
-  
-  if (copyBtn) {
-    copyBtn.addEventListener("click", copyTranscription);
-  }
-  if (clearBtn) {
-    clearBtn.addEventListener("click", clearTranscription);
-  }
-  
-  // Check for MediaRecorder support
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showStatus("❌ Your browser doesn't support audio recording.", "error", document.getElementById("echo-status"));
-    document.getElementById("start-record-btn").disabled = true;
-  }
-  
-  // Add some example text if empty
-  const textInput = document.getElementById("text-input");
-  if (!textInput.value.trim()) {
-    // Optional: Add example text
-    // textInput.value = "Hello! This is a test of the AI voice generation system.";
-  }
-});
-
-// Handle page visibility change (pause audio when tab is hidden)
-document.addEventListener("visibilitychange", function() {
-  if (document.hidden) {
-    const audioPlayer = document.getElementById("audio-player");
-    const recordedAudio = document.getElementById("recorded-audio");
-    
-    if (audioPlayer && !audioPlayer.paused) {
-      audioPlayer.pause();
+    // Escape to clear status
+    if (event.key === 'Escape') {
+      hideStatus();
     }
-    if (recordedAudio && !recordedAudio.paused) {
-      recordedAudio.pause();
-    }
-  }
-});
+  });
 
-// Utility function to format time
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // Page visibility change
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && elements.aiAudio && !elements.aiAudio.paused) {
+      elements.aiAudio.pause();
+    }
+  });
 }
 
-// Export functions for potential external use
-window.voiceAgent = {
-  generateAudio,
-  showStatus,
-  hideStatus,
-  startRecording,
-  stopRecording,
-  transcribeAudio,
-  copyTranscription,
-  clearTranscription,
-  queryLLMWithAudio,
-};
+// Initialization
+function initialize() {
+  console.log("AI Voice Agent initialized");
+  
+  // Initialize session
+  currentSessionId = getOrCreateSessionId();
+  updateSessionDisplay();
+  
+  // Check microphone support
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showStatus("Your browser doesn't support audio recording.", "error");
+    elements.recordBtn.disabled = true;
+    return;
+  }
+  
+  // Setup event listeners
+  setupEventListeners();
+  
+  // Initial UI state
+  updateRecordButtonState('idle');
+  
+  console.log(`Initialized with session ID: ${currentSessionId}`);
+}
+
+// Start the application
+document.addEventListener('DOMContentLoaded', initialize);

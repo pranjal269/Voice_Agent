@@ -3,478 +3,690 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Voice Agent - Sound Sculpt Engine</title>
+  <title>AI Voice Agent - Conversational Interface</title>
   <style>
     /* =================================================================
-       DESIGN SYSTEM - Design Tokens & Variables
+       DESIGN SYSTEM - Enhanced Design Tokens & Variables
        ================================================================= */
     :root {
-      /* Colors */
-      --color-primary: rgba(59, 130, 246, 0.15);
-      --color-primary-border: rgba(59, 130, 246, 0.3);
-      --color-primary-hover: rgba(59, 130, 246, 0.25);
-      --color-primary-border-hover: rgba(59, 130, 246, 0.4);
-      --color-primary-focus: rgba(59, 130, 246, 0.4);
-      --color-primary-shadow: rgba(59, 130, 246, 0.2);
-      
-      --color-danger: rgba(239, 68, 68, 0.15);
-      --color-danger-border: rgba(239, 68, 68, 0.3);
-      --color-danger-hover: rgba(239, 68, 68, 0.25);
-      --color-danger-border-hover: rgba(239, 68, 68, 0.4);
-      --color-danger-focus: rgba(239, 68, 68, 0.4);
-      --color-danger-shadow: rgba(239, 68, 68, 0.2);
+      /* Enhanced Color System */
+      --color-primary: rgba(99, 102, 241, 0.15);
+      --color-primary-border: rgba(99, 102, 241, 0.3);
+      --color-primary-hover: rgba(99, 102, 241, 0.25);
+      --color-primary-border-hover: rgba(99, 102, 241, 0.4);
+      --color-primary-focus: rgba(99, 102, 241, 0.4);
+      --color-primary-shadow: rgba(99, 102, 241, 0.3);
+      --color-primary-solid: #6366f1;
       
       --color-success: rgba(34, 197, 94, 0.15);
       --color-success-border: rgba(34, 197, 94, 0.3);
-      --color-success-hover: rgba(34, 197, 94, 0.25);
-      --color-success-border-hover: rgba(34, 197, 94, 0.4);
-      --color-success-focus: rgba(34, 197, 94, 0.4);
-      --color-success-shadow: rgba(34, 197, 94, 0.2);
+      --color-success-solid: #22c55e;
+      
+      --color-error: rgba(239, 68, 68, 0.15);
+      --color-error-border: rgba(239, 68, 68, 0.3);
+      --color-error-solid: #ef4444;
+      
+      --color-recording: rgba(248, 113, 113, 0.2);
+      --color-recording-border: rgba(248, 113, 113, 0.4);
+      --color-recording-solid: #f87171;
       
       --color-neutral: rgba(255, 255, 255, 0.1);
       --color-neutral-border: rgba(255, 255, 255, 0.2);
-      --color-neutral-hover: rgba(255, 255, 255, 0.15);
-      --color-neutral-border-hover: rgba(255, 255, 255, 0.3);
-      --color-neutral-focus: rgba(255, 255, 255, 0.3);
-      --color-neutral-shadow: rgba(0, 0, 0, 0.3);
+      --color-text: #f8fafc;
+      --color-text-secondary: rgba(248, 250, 252, 0.7);
+      --color-text-muted: rgba(248, 250, 252, 0.5);
       
-      --color-recording: rgba(220, 20, 60, 0.2);
-      --color-recording-border: rgba(220, 20, 60, 0.4);
-      --color-text: #e8f4fd;
+      /* Enhanced Background */
+      --bg-primary: linear-gradient(135deg, #0f0f23 0%, #1e1b4b 25%, #312e81 50%, #1e1b4b 75%, #0f0f23 100%);
+      --bg-card: rgba(255, 255, 255, 0.08);
+      --bg-card-hover: rgba(255, 255, 255, 0.12);
+      --bg-glass: rgba(255, 255, 255, 0.05);
+      --bg-glass-border: rgba(255, 255, 255, 0.1);
       
       /* Typography */
-      --font-family-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      --font-family-mono: 'Monaco', 'Courier New', monospace;
-      --font-weight-normal: 600;
-      --font-weight-bold: 700;
+      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+      --font-mono: 'Monaco', 'JetBrains Mono', 'Fira Code', monospace;
       
-      /* Spacing & Sizing */
-      --spacing-xs: 4px;
-      --spacing-sm: 8px;
-      --spacing-md: 12px;
-      --spacing-lg: 16px;
-      --spacing-xl: 20px;
-      --spacing-xxl: 28px;
-      
-      /* Button Dimensions */
-      --btn-height-sm: 40px;
-      --btn-height-md: 48px;
-      --btn-height-lg: 56px;
-      --btn-min-width-sm: 120px;
-      --btn-min-width-md: 140px;
-      --btn-min-width-lg: 180px;
-      --btn-border-radius-sm: 10px;
-      --btn-border-radius-md: 12px;
+      /* Spacing */
+      --spacing-xs: 0.5rem;
+      --spacing-sm: 0.75rem;
+      --spacing-md: 1rem;
+      --spacing-lg: 1.5rem;
+      --spacing-xl: 2rem;
+      --spacing-xxl: 3rem;
       
       /* Effects */
-      --shadow-base: 0 4px 16px rgba(0, 0, 0, 0.2);
-      --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.3);
-      --shadow-focus-ring: 0 0 0 2px;
-      --transition-base: all 0.2s ease;
-      --transform-hover: translateY(-2px);
-      --transform-active: translateY(-1px) scale(1.01);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+      --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.3);
+      --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.2);
+      
+      --transition-fast: 0.15s ease-out;
+      --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-bouncy: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      
+      --border-radius-sm: 0.5rem;
+      --border-radius-md: 0.75rem;
+      --border-radius-lg: 1rem;
+      --border-radius-xl: 1.5rem;
+      --border-radius-full: 50%;
     }
 
+    /* =================================================================
+       BASE STYLES
+       ================================================================= */
     * {
       box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+      padding: 0;
+      font-family: var(--font-family);
+      background: var(--bg-primary);
       min-height: 100vh;
-      color: #e8f4fd;
+      color: var(--color-text);
       overflow-x: hidden;
-    }
-
-    .main-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 40px 20px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 60px;
-      position: relative;
-      overflow: visible;
-    }
-    
-    .header::before {
-      content: '';
-      position: absolute;
-      width: 300px;
-      height: 100px;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -30%);
-      background-image: 
-        radial-gradient(1px 1px at 40px 60px, rgba(59, 130, 246, 0.3), transparent 50%),
-        radial-gradient(1px 1px at 90px 40px, rgba(16, 185, 129, 0.3), transparent 50%),
-        radial-gradient(1px 1px at 140px 80px, rgba(99, 102, 241, 0.3), transparent 50%),
-        radial-gradient(1px 1px at 190px 50px, rgba(59, 130, 246, 0.3), transparent 50%);
-      background-size: 200px 200px;
-      background-repeat: no-repeat;
-      z-index: 0;
-      opacity: 0.7;
-      filter: blur(1px);
-      animation: particle-drift 15s ease-in-out infinite alternate;
-      pointer-events: none;
-    }
-    
-    @keyframes particle-drift {
-      0% { transform: translate(-50%, -30%) rotate(0deg); }
-      100% { transform: translate(-50%, -30%) rotate(10deg); }
-    }
-
-    .header::after {
-      content: '';
-      position: absolute;
-      bottom: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 80px;
-      height: 2px;
-      background: rgba(232, 244, 253, 0.3);
-      border-radius: 1px;
-    }
-
-    .main-title {
-      font-size: 48px;
-      font-weight: 700;
-      margin: 0 0 16px;
-      color: #e8f4fd;
-      letter-spacing: -0.025em;
-      text-shadow: 0 2px 10px rgba(232, 244, 253, 0.2);
-      position: relative;
-      display: inline-block;
-      z-index: 1;
-      animation: floating 3s ease-in-out infinite;
-    }
-    
-    @keyframes floating {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-5px); }
-    }
-    
-    .main-title::before {
-      content: "";
-      position: absolute;
-      top: -10px;
-      left: -15px;
-      right: -15px;
-      bottom: -10px;
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.1), rgba(99, 102, 241, 0.2));
-      border-radius: 8px;
-      z-index: -1;
-      transform-origin: center;
-      animation: pulse-glow 6s infinite alternate ease-in-out;
-      filter: blur(8px);
-      opacity: 0.6;
-    }
-    
-    @keyframes pulse-glow {
-      0% {
-        transform: scale(0.95);
-        opacity: 0.4;
-      }
-      50% {
-        transform: scale(1.05);
-        opacity: 0.7;
-      }
-      100% {
-        transform: scale(0.95);
-        opacity: 0.4;
-      }
-    }
-
-    .main-subtitle {
-      font-size: 20px;
-      color: rgba(232, 244, 253, 0.8);
-      margin: 0;
-      font-weight: 400;
-    }
-
-    .cards-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      margin-bottom: 40px;
-    }
-
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 32px 24px;
-      text-align: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .card-icon {
-      width: 70px;
-      height: 70px;
-      margin: 0 auto 20px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-    }
-
-    .card-title {
-      font-size: 24px;
-      font-weight: 700;
-      margin: 0 0 12px;
-      color: #e8f4fd;
-      letter-spacing: -0.01em;
-    }
-
-    .card-description {
-      font-size: 15px;
-      color: rgba(232, 244, 253, 0.7);
-      margin: 0 0 24px;
-      line-height: 1.6;
-    }
-
-    /* Input Styles */
-    .input-container {
-      margin-bottom: 32px;
-      position: relative;
-    }
-
-    .text-input {
-      width: 100%;
-      padding: 16px 20px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      color: #e8f4fd;
-      font-size: 16px;
-      font-family: inherit;
-      outline: none;
-      transition: all 0.2s ease;
-      resize: none;
-      min-height: 80px;
-      line-height: 1.6;
-    }
-
-    .text-input:focus {
-      border-color: rgba(255, 255, 255, 0.4);
-      background: rgba(255, 255, 255, 0.08);
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-    }
-
-    .text-input::placeholder {
-      color: rgba(232, 244, 253, 0.5);
-    }
-
-    .char-counter {
-      position: absolute;
-      bottom: -20px;
-      right: 8px;
-      font-size: 12px;
-      color: rgba(232, 244, 253, 0.6);
       font-weight: 500;
     }
 
     /* =================================================================
-       UNIFIED BUTTON SYSTEM
+       LAYOUT COMPONENTS
        ================================================================= */
-    
-    /* Button Container */
-    .button-container {
-      margin-bottom: 32px;
+    .app-container {
+      min-height: 100vh;
       display: flex;
-      gap: var(--spacing-lg);
-      flex-wrap: wrap;
-      justify-content: center;
+      flex-direction: column;
+      position: relative;
     }
 
-    /* Base Button Styles - All buttons inherit from this */
-    .btn, 
-    .generate-btn, 
-    .record-btn,
-    .primary-record-btn,
-    .secondary-record-btn,
-    .chat-control-btn {
-      /* Base Properties - ALL BUTTONS USE SAME COLOR AS GENERATE VOICE */
-      background: var(--color-primary);
+    .app-container::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-xl);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* =================================================================
+       AGENT INTERFACE CARD
+       ================================================================= */
+    .agent-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--bg-glass-border);
+      border-radius: var(--border-radius-xl);
+      box-shadow: var(--shadow-xl);
+      padding: var(--spacing-xxl);
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .agent-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.5), transparent);
+    }
+
+    /* =================================================================
+       HEADER SECTION
+       ================================================================= */
+    .header-section {
+      margin-bottom: var(--spacing-xxl);
+    }
+
+    .main-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      margin: 0 0 var(--spacing-sm);
+      background: linear-gradient(135deg, var(--color-text) 0%, rgba(99, 102, 241, 0.8) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.025em;
+    }
+
+    .subtitle {
+      font-size: 1.125rem;
+      color: var(--color-text-secondary);
+      margin: 0 0 var(--spacing-lg);
+      line-height: 1.6;
+    }
+
+    /* =================================================================
+       SESSION INFO
+       ================================================================= */
+    .session-info {
+      background: var(--bg-glass);
+      border: 1px solid var(--bg-glass-border);
+      border-radius: var(--border-radius-md);
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .session-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-primary-solid);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .session-id {
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      background: rgba(0, 0, 0, 0.2);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--border-radius-sm);
+      display: inline-block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* =================================================================
+       MAIN RECORDING INTERFACE
+       ================================================================= */
+    .recording-interface {
+      margin: var(--spacing-xxl) 0;
+      position: relative;
+    }
+
+    .record-button {
+      width: 120px;
+      height: 120px;
+      border-radius: var(--border-radius-full);
+      border: 3px solid var(--color-primary-solid);
+      background: var(--bg-glass);
+      backdrop-filter: blur(10px);
       color: var(--color-text);
-      border: 1px solid var(--color-primary-border);
-      font-family: var(--font-family-primary);
-      font-weight: var(--font-weight-normal);
+      font-size: 2.5rem;
       cursor: pointer;
-      transition: var(--transition-base);
-      box-shadow: var(--shadow-base);
-      
-      /* Layout */
-      display: inline-flex;
+      transition: var(--transition-smooth);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-md), 0 0 0 0 rgba(99, 102, 241, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--spacing-lg);
+      outline: none;
+    }
+
+    .record-button::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+      transform: translate(-50%, -50%) scale(0);
+      transition: var(--transition-smooth);
+      border-radius: 50%;
+    }
+
+    .record-button:hover {
+      transform: scale(1.05);
+      box-shadow: var(--shadow-lg), 0 0 0 8px rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.8);
+    }
+
+    .record-button:hover::before {
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    .record-button:active {
+      transform: scale(0.95);
+    }
+
+    /* Recording State */
+    .record-button.recording {
+      border-color: var(--color-recording-solid);
+      background: var(--color-recording);
+      animation: recording-pulse 2s ease-in-out infinite;
+      box-shadow: var(--shadow-md), 0 0 0 0 rgba(248, 113, 113, 0.4);
+    }
+
+    .record-button.recording::before {
+      background: radial-gradient(circle, rgba(248, 113, 113, 0.3) 0%, transparent 70%);
+      transform: translate(-50%, -50%) scale(1.5);
+    }
+
+    @keyframes recording-pulse {
+      0%, 100% {
+        box-shadow: var(--shadow-md), 0 0 0 0 rgba(248, 113, 113, 0.4);
+      }
+      50% {
+        box-shadow: var(--shadow-md), 0 0 0 20px rgba(248, 113, 113, 0.1);
+      }
+    }
+
+    /* Processing State */
+    .record-button.processing {
+      border-color: var(--color-primary-solid);
+      background: var(--color-primary);
+      animation: processing-spin 1s linear infinite;
+    }
+
+    @keyframes processing-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .record-status {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      margin-bottom: var(--spacing-md);
+      min-height: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-xs);
+    }
+
+    .recording-timer {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-recording-solid);
+      margin-top: var(--spacing-md);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: var(--transition-smooth);
+    }
+
+    .recording-timer.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* =================================================================
+       CONVERSATION DISPLAY
+       ================================================================= */
+    .conversation-display {
+      background: var(--bg-glass);
+      border: 1px solid var(--bg-glass-border);
+      border-radius: var(--border-radius-lg);
+      padding: var(--spacing-xl);
+      margin: var(--spacing-xl) 0;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: var(--transition-smooth);
+      text-align: left;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .conversation-display.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .conversation-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+      font-weight: 600;
+      color: var(--color-primary-solid);
+    }
+
+    .conversation-text {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--color-text);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .conversation-meta {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin-top: var(--spacing-lg);
+      padding-top: var(--spacing-md);
+      border-top: 1px solid var(--bg-glass-border);
+      font-style: italic;
+    }
+
+    /* =================================================================
+       CONTROL BUTTONS
+       ================================================================= */
+    .controls-section {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: var(--spacing-xl);
+    }
+
+    .control-btn {
+      padding: var(--spacing-sm) var(--spacing-lg);
+      border: 1px solid var(--bg-glass-border);
+      border-radius: var(--border-radius-md);
+      background: var(--bg-glass);
+      backdrop-filter: blur(10px);
+      color: var(--color-text-secondary);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      outline: none;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      white-space: nowrap;
+    }
+
+    .control-btn:hover {
+      background: var(--bg-glass-border);
+      border-color: var(--color-primary-border);
+      color: var(--color-text);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .control-btn:active {
+      transform: translateY(0);
+    }
+
+    .control-btn.primary {
+      background: var(--color-primary);
+      border-color: var(--color-primary-border);
+      color: var(--color-text);
+    }
+
+    .control-btn.primary:hover {
+      background: var(--color-primary-hover);
+      border-color: var(--color-primary-border-hover);
+    }
+
+    .control-btn.success {
+      background: var(--color-success);
+      border-color: var(--color-success-border);
+      color: var(--color-text);
+    }
+
+    .control-btn.danger {
+      background: var(--color-error);
+      border-color: var(--color-error-border);
+      color: var(--color-text);
+    }
+
+    /* =================================================================
+       STATUS MESSAGES
+       ================================================================= */
+    .status-message {
+      margin: var(--spacing-lg) 0;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius-md);
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .status-message.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .status-message.success {
+      background: var(--color-success);
+      border-color: var(--color-success-border);
+      color: var(--color-text);
+    }
+
+    .status-message.error {
+      background: var(--color-error);
+      border-color: var(--color-error-border);
+      color: var(--color-text);
+    }
+
+    .status-message.loading {
+      background: var(--color-primary);
+      border-color: var(--color-primary-border);
+      color: var(--color-text);
+      display: flex;
       align-items: center;
       justify-content: center;
       gap: var(--spacing-sm);
-      
-      /* Typography */
-      text-decoration: none;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* =================================================================
+       KEYBOARD SHORTCUTS
+       ================================================================= */
+    .shortcuts-info {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 2rem;
+      margin-top: 2rem;
       text-align: center;
-      line-height: 1.2;
-      
-      /* Interaction States */
-      user-select: none;
-      outline: none;
-      
-      /* Default Size (Medium) */
-      padding: 14px var(--spacing-xxl);
-      border-radius: var(--btn-border-radius-md);
-      font-size: 16px;
-      min-width: var(--btn-min-width-md);
-      min-height: var(--btn-height-md);
+      color: white;
     }
 
-    /* Hover State - Universal */
-    .btn:hover:not(:disabled), 
-    .generate-btn:hover:not(:disabled), 
-    .record-btn:hover:not(:disabled),
-    .primary-record-btn:hover:not(:disabled),
-    .secondary-record-btn:hover:not(:disabled),
-    .chat-control-btn:hover:not(:disabled) {
-      background: var(--color-primary-hover);
-      border-color: var(--color-primary-border-hover);
-      transform: var(--transform-hover);
-      box-shadow: var(--shadow-hover), 0 2px 12px var(--color-primary-shadow);
+    .shortcuts-title {
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: white;
+      margin-bottom: 2rem;
+      text-align: center;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
-    /* Active State - Universal */
-    .btn:active, 
-    .generate-btn:active, 
-    .record-btn:active,
-    .primary-record-btn:active,
-    .secondary-record-btn:active,
-    .chat-control-btn:active {
-      transform: var(--transform-active);
+    .shortcut-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      justify-items: center;
+      max-width: 800px;
+      margin: 0 auto;
     }
 
-    /* Disabled State - Universal */
-    .btn:disabled, 
-    .generate-btn:disabled, 
-    .record-btn:disabled,
-    .primary-record-btn:disabled,
-    .secondary-record-btn:disabled,
-    .chat-control-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-      filter: grayscale(30%);
+    .shortcut {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      min-width: 200px;
+      text-align: center;
+      backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
     }
 
-    /* Focus State - Universal */
-    .btn:focus, 
-    .generate-btn:focus, 
-    .record-btn:focus,
-    .primary-record-btn:focus,
-    .secondary-record-btn:focus,
-    .chat-control-btn:focus {
-      box-shadow: var(--shadow-base), var(--shadow-focus-ring) var(--color-primary-focus);
+    .shortcut:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     }
 
-    /* =================================================================
-       BUTTON SIZE VARIANTS
-       ================================================================= */
-    
-    /* Small Buttons */
-    .btn-small {
-      padding: 10px var(--spacing-xl);
-      font-size: 14px;
-      min-width: var(--btn-min-width-sm);
-      min-height: var(--btn-height-sm);
-      border-radius: var(--btn-border-radius-sm);
+    .shortcut span {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1rem;
+      display: block;
     }
 
-    /* Large Buttons */
-    .btn-large {
-      padding: var(--spacing-lg) 32px;
-      font-size: 18px;
-      min-width: var(--btn-min-width-lg);
-      min-height: var(--btn-height-lg);
-      font-weight: var(--font-weight-bold);
+    .shortcut span:first-child {
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.9rem;
+      text-transform: uppercase;
     }
 
-    /* =================================================================
-       ALL BUTTONS USE SAME COLOR AS GENERATE VOICE BUTTON
-       ================================================================= */
-    
-    /* All buttons now inherit the same primary blue color from the base styles above */
-
-    /* =================================================================
-       SPECIAL STATES
-       ================================================================= */
-
-    /* Recording State */
-    .recording,
-    .primary-record-btn.recording {
-      background: var(--color-recording) !important;
-      border-color: var(--color-recording-border) !important;
-      animation: pulse-recording 1.5s ease-in-out infinite alternate;
-    }
-
-    @keyframes pulse-recording {
-      from { 
-        background: rgba(220, 20, 60, 0.2);
-        border-color: rgba(220, 20, 60, 0.4);
+    @media (max-width: 768px) {
+      .shortcuts-info {
+        padding: 1.5rem;
+        margin: 1.5rem;
       }
-      to { 
-        background: rgba(220, 20, 60, 0.35);
-        border-color: rgba(220, 20, 60, 0.6);
+
+      .shortcuts-title {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .shortcut-list {
+        grid-template-columns: 1fr;
+      }
+
+      .shortcut {
+        min-width: 180px;
+        padding: 0.75rem 1rem;
+      }
+
+      .shortcut span {
+        font-size: 0.9rem;
+      }
+
+      .shortcut span:first-child {
+        font-size: 0.8rem;
       }
     }
 
-    /* Audio Player */
-    .audio-container {
-      margin-bottom: 24px;
+    /* =================================================================
+       RESPONSIVE DESIGN
+       ================================================================= */
+    @media (max-width: 768px) {
+      .main-content {
+        padding: var(--spacing-lg);
+      }
+
+      .agent-card {
+        padding: var(--spacing-xl);
+      }
+
+      .main-title {
+        font-size: 2rem;
+      }
+
+      .subtitle {
+        font-size: 1rem;
+      }
+
+      .record-button {
+        width: 100px;
+        height: 100px;
+        font-size: 2rem;
+      }
+
+      .controls-section {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .control-btn {
+        min-width: 200px;
+        justify-content: center;
+      }
+
+      .shortcut-list {
+        flex-direction: column;
+        align-items: center;
+      }
     }
 
-    .audio-player {
-      width: 100%;
-      height: 45px;
-      border-radius: 8px;
-      background: transparent;
-      border: none;
-      display: none;
-      outline: none;
-    }
-    
-    .audio-player::-webkit-media-controls-panel {
-      background-color: rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+    @media (max-width: 480px) {
+      .agent-card {
+        padding: var(--spacing-lg);
+      }
+
+      .record-button {
+        width: 80px;
+        height: 80px;
+        font-size: 1.5rem;
+      }
     }
 
-    /* Transcription Styles */
-    .transcription-container {
-      background: rgba(16, 185, 129, 0.08);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      border-radius: 16px;
-      padding: 24px;
-      margin: 24px 0;
-      display: none;
-      animation: fadeInUp 0.3s ease-out;
-      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
+    /* =================================================================
+       CUSTOM SCROLLBAR
+       ================================================================= */
+    .conversation-display::-webkit-scrollbar {
+      width: 6px;
     }
 
-    @keyframes fadeInUp {
+    .conversation-display::-webkit-scrollbar-track {
+      background: var(--bg-glass);
+      border-radius: 3px;
+    }
+
+    .conversation-display::-webkit-scrollbar-thumb {
+      background: var(--bg-glass-border);
+      border-radius: 3px;
+    }
+
+    .conversation-display::-webkit-scrollbar-thumb:hover {
+      background: var(--color-primary-border);
+    }
+
+    /* =================================================================
+       ACCESSIBILITY & FOCUS STATES
+       ================================================================= */
+    .record-button:focus,
+    .control-btn:focus {
+      box-shadow: var(--shadow-md), 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+
+    /* =================================================================
+       ANIMATION UTILITIES
+       ================================================================= */
+    .fade-in {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .slide-up {
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
       from {
         opacity: 0;
         transform: translateY(10px);
@@ -485,486 +697,133 @@
       }
     }
 
-    .transcription-container.show {
-      display: block;
-    }
-
-    .transcription-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      color: #e8f4fd;
-      font-weight: 600;
-      font-size: 16px;
-    }
-
-    .transcription-text {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 20px;
-      min-height: 80px;
-      color: #e8f4fd;
-      font-size: 15px;
-      line-height: 1.7;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-      margin-bottom: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .transcription-actions {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 20px;
-    }
-
-    .transcription-meta {
-      font-size: 12px;
-      color: rgba(232, 244, 253, 0.6);
-      margin-top: 8px;
-      font-style: italic;
-    }
-
-    /* Status Messages */
-    .status {
-      margin-bottom: 16px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-weight: 500;
-      min-height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-      opacity: 0;
-      transform: translateY(5px);
-    }
-
-    .status.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .status.success {
-      background: rgba(34, 197, 94, 0.15);
-      color: #e8f4fd;
-      border: 1px solid rgba(34, 197, 94, 0.3);
-    }
-
-    .status.error {
-      background: rgba(239, 68, 68, 0.15);
-      color: #e8f4fd;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-
-    .status.loading {
-      background: rgba(59, 130, 246, 0.15);
-      color: #e8f4fd;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-    }
-
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid transparent;
-      border-top: 2px solid currentColor;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-right: 10px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-
-
-    /* Keyboard Shortcuts */
-    .keyboard-shortcuts {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 20px;
-      margin-top: 30px;
-      font-size: 13px;
-      color: rgba(232, 244, 253, 0.7);
-      text-align: center;
-    }
-
-    .keyboard-shortcuts h4 {
-      margin-bottom: 12px;
-      color: #e8f4fd;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .shortcut {
-      display: inline-block;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 4px 8px;
-      border-radius: 4px;
-      margin: 2px 4px;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-weight: 600;
-      font-size: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .footer {
-      text-align: center;
-      margin-top: 40px;
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      font-size: 14px;
-      color: rgba(232, 244, 253, 0.7);
-      font-weight: 400;
-    }
-
-    .footer .heart {
-      color: #e8f4fd;
-      font-size: 16px;
-    }
-
-    /* Mobile Responsive */
-    @media (max-width: 768px) {
-      .main-title {
-        font-size: 36px;
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
       }
-
-      .main-subtitle {
-        font-size: 18px;
-      }
-
-      .cards-container {
-        grid-template-columns: 1fr;
-        gap: 30px;
-      }
-
-      .card {
-        padding: 32px 24px;
-      }
-
-      .card-icon {
-        width: 70px;
-        height: 70px;
-        font-size: 32px;
-      }
-
-      .card-title {
-        font-size: 24px;
-      }
-
-      .button-container {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .btn, .generate-btn, .record-btn {
-        min-width: 200px;
-        margin: 4px 0;
-      }
-
-      .transcription-actions {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .transcription-actions .btn {
-        min-width: 200px;
-        margin: 6px 0;
-      }
-    }
-
-    /* Enhanced scrollbar */
-    .text-input::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .text-input::-webkit-scrollbar-track {
-      background: rgba(240, 235, 216, 0.1);
-      border-radius: 3px;
-    }
-
-    .text-input::-webkit-scrollbar-thumb {
-      background: rgba(62, 92, 118, 0.5);
-      border-radius: 3px;
-    }
-
-    .text-input::-webkit-scrollbar-thumb:hover {
-      background: rgba(62, 92, 118, 0.7);
-    }
-
-    .transcription-text::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .transcription-text::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 3px;
-    }
-
-    .transcription-text::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 3px;
-    }
-
-    /* AI Voice Assistant Layout */
-    .assistant-section {
-      margin: 24px 0;
-      text-align: center;
-    }
-
-    /* Session Info Card */
-    .session-info-card {
-      background: rgba(59, 130, 246, 0.08);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 8px;
-    }
-
-    .session-label {
-      color: rgba(59, 130, 246, 0.9);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-
-    .session-id-display {
-      color: rgba(232, 244, 253, 0.8);
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 11px;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 6px 12px;
-      border-radius: 6px;
-      display: inline-block;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* Recording Controls */
-    .recording-controls {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-
-
-
-
-    .recording-timer {
-      font-size: 20px;
-      font-weight: 700;
-      color: #e8f4fd;
-      font-family: 'Monaco', 'Courier New', monospace;
-      display: none;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 8px 16px;
-      margin: 0 auto;
-      max-width: fit-content;
-    }
-
-    /* Chat Management */
-    .chat-management {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 20px 16px 16px;
-    }
-
-    .chat-controls-header {
-      color: rgba(232, 244, 253, 0.7);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 16px;
-    }
-
-    .chat-controls-grid {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-
-
-
-
-    /* Mobile Responsive Design */
-    @media (max-width: 768px) {
-      .recording-controls {
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      .primary-record-btn,
-      .secondary-record-btn {
-        min-width: 200px;
-        padding: 16px 24px;
-      }
-
-      .chat-controls-grid {
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .chat-control-btn {
-        min-width: 200px;
-        padding: 14px 20px;
-      }
-
-      .session-id-display {
-        max-width: 250px;
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
     }
   </style>
 </head>
 <body>
-  <div class="main-container">
-    <div class="header">
-      <h1 class="main-title">AI Voice Agent</h1>
-      <p class="main-subtitle">Transform your thoughts into speech with cutting-edge AI technology</p>
-    </div>
-
-    <div class="cards-container">
-      <!-- AI Voice Agent Card -->
-      <div class="card">
-        <div class="card-icon">🎤</div>
-        <h2 class="card-title">Text to Speech</h2>
-        <p class="card-description">Convert your written text into natural-sounding speech with advanced AI voice synthesis</p>
-
-        <div class="input-container">
-          <textarea 
-            id="text-input" 
-            class="text-input" 
-            placeholder="Enter your message here... Let AI bring your words to life!"
-            rows="3"
-            maxlength="5000"
-          ></textarea>
-          <div id="char-counter" class="char-counter">0/5000</div>
+  <div class="app-container">
+    <div class="main-content">
+      <div class="agent-card">
+        <!-- Header Section -->
+        <div class="header-section">
+          <h1 class="main-title">AI Voice Agent</h1>
+          <p class="subtitle">
+            Have a natural conversation with AI. Speak your thoughts and get intelligent responses in real-time.
+          </p>
         </div>
 
-        <div class="button-container">
-          <button id="generate-btn" class="generate-btn">
-            <span id="btn-icon"></span>
-            <span id="btn-text">Generate Voice</span>
+        <!-- Session Info -->
+        <div class="session-info">
+          <div class="session-label">Current Session</div>
+          <div id="session-display" class="session-id">Loading session...</div>
+        </div>
+
+        <!-- Main Recording Interface -->
+        <div class="recording-interface">
+          <div id="record-status" class="record-status">
+            Tap to start conversation
+          </div>
+          
+          <button id="main-record-btn" class="record-button" aria-label="Start/Stop Recording">
+            <span id="record-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+              </svg>
+            </span>
+          </button>
+          
+          <div id="recording-timer" class="recording-timer">00:00</div>
+        </div>
+
+        <!-- Conversation Display -->
+        <div id="conversation-display" class="conversation-display">
+          <div class="conversation-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+              <line x1="9" y1="9" x2="9.01" y2="9"></line>
+              <line x1="15" y1="9" x2="15.01" y2="9"></line>
+            </svg>
+            <span>AI Conversation</span>
+          </div>
+          <div id="conversation-text" class="conversation-text"></div>
+          <div id="conversation-meta" class="conversation-meta"></div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="controls-section">
+          <button id="new-session-btn" class="control-btn primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c-4.97 0-9-4.03-9-9m9 9a9 9 0 0 0 9-9"></path>
+            </svg>
+            New Chat
+          </button>
+          <button id="copy-conversation-btn" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy Text
+          </button>
+          <button id="clear-conversation-btn" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Clear
+          </button>
+          <button id="toggle-conversation-btn" class="control-btn success">
+            <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <rect x="9" y="9" width="6" height="6"></rect>
+            </svg>
+            Pause Auto-Record
           </button>
         </div>
 
-        <div class="audio-container">
-          <audio id="audio-player" class="audio-player" controls></audio>
-        </div>
+        <!-- Status Message -->
+        <div id="status-message" class="status-message"></div>
 
-        <div id="status" class="status"></div>
-      </div>
-
-      <!-- AI Voice Assistant Card - Redesigned for better organization and alignment -->
-      <div class="card">
-        <div class="card-icon">🤖</div>
-        <h2 class="card-title">AI Voice Assistant</h2>
-        <p class="card-description">Talk to AI! Record your question and get an intelligent response spoken back in a natural voice</p>
-        
-        <!-- Session Info Section -->
-        <div class="assistant-section">
-          <div class="session-info-card">
-            <div class="session-label">Current Session</div>
-            <div id="session-display" class="session-id-display">Loading session...</div>
-          </div>
-        </div>
-
-        <!-- Main Recording Controls -->
-        <div class="assistant-section">
-          <div class="recording-controls">
-            <button id="start-record-btn" class="primary-record-btn">
-              <span id="start-record-text">Start Recording</span>
-            </button>
-            <button id="stop-record-btn" class="secondary-record-btn" disabled>
-              <span>Stop Recording</span>
-            </button>
-          </div>
-          <div id="timer" class="recording-timer">00:00</div>
-        </div>
-
-        <!-- Chat Management Controls -->
-        <div class="assistant-section">
-          <div class="chat-management">
-            <div class="chat-controls-header">Chat Management</div>
-            <div class="chat-controls-grid">
-              <button id="new-session-btn" class="chat-control-btn btn-small new-chat-btn">
-                New Chat
-              </button>
-              <button id="stop-conversation-btn" class="chat-control-btn btn-small stop-conversation-btn">
-                Stop Conversation
-              </button>
-              <button id="resume-conversation-btn" class="chat-control-btn btn-small resume-conversation-btn" style="display: none;">
-                Resume Conversation
-              </button>
+        <!-- Keyboard Shortcuts -->
+        <div class="shortcuts-info">
+          <div class="shortcuts-title">Keyboard Shortcuts</div>
+          <div class="shortcut-list">
+            <div class="shortcut">
+              <span>Space</span>
+              <span>Record</span>
+            </div>
+            <div class="shortcut">
+              <span>Ctrl + C</span>
+              <span>Copy</span>
+            </div>
+            <div class="shortcut">
+              <span>Ctrl + N</span>
+              <span>New Chat</span>
+            </div>
+            <div class="shortcut">
+              <span>Esc</span>
+              <span>Clear Status</span>
             </div>
           </div>
         </div>
 
-        <div class="audio-container">
-          <audio id="recorded-audio" class="audio-player" controls style="display: none;"></audio>
-        </div>
-
-        <!-- AI Conversation Container -->
-        <div id="transcription-result" class="transcription-container">
-          <div class="transcription-header">
-            <span>🤖</span>
-            <span>AI Conversation</span>
-          </div>
-          <div id="transcription-text" class="transcription-text"></div>
-          <div class="transcription-actions">
-            <button id="copy-transcription-btn" class="btn btn-small btn-primary">
-               Copy Text
-            </button>
-            <button id="clear-transcription-btn" class="btn btn-small btn-danger">
-               Clear
-            </button>
-          </div>
-          <div id="transcription-meta" class="transcription-meta"></div>
-        </div>
-
-        <div id="echo-status" class="status"></div>
+        <!-- Hidden Audio Element -->
+        <audio id="ai-response-audio" preload="auto" style="display: none;"></audio>
       </div>
-    </div>
-
-    <!-- Keyboard Shortcuts -->
-    <div class="keyboard-shortcuts">
-      <h4>Keyboard Shortcuts</h4>
-      <div>
-        <span class="shortcut">Ctrl + Enter</span> Generate Audio
-        <span class="shortcut">Space</span> Start/Stop Recording
-        <span class="shortcut">Ctrl + C</span> Copy Transcription
-        <span class="shortcut">Ctrl + Shift + S</span> Stop/Resume Conversation
-        <span class="shortcut">Esc</span> Clear Status Messages
-      </div>
-    </div>
-
-    <div class="footer">
-      Built with <span class="heart">❤️</span> by Pranjal | #30DaysOfCode 
     </div>
   </div>
 
-  <script src="/static/script.js?v=2025-final-fix"></script>
+  <script src="/static/script.js?v=2025-professional"></script>
 </body>
 </html>

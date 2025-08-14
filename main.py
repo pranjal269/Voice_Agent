@@ -24,8 +24,7 @@ load_dotenv()
 # Load the API keys once at startup
 MURF_API_KEY = os.getenv("MURF_API_KEY")
 ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
-# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")  # TESTING: LLM Error
-GEMINI_API_KEY = None
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
 # Initialize AssemblyAI
 aai.settings.api_key = ASSEMBLYAI_API_KEY
